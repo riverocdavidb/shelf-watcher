@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -80,7 +79,15 @@ const AddEditItemDialog = ({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
-      onSave(values);
+      const formData: Omit<InventoryItem, "id" | "lastUpdated"> = {
+        sku: values.sku,
+        name: values.name,
+        department: values.department,
+        quantity: values.quantity,
+        status: values.status,
+      };
+      
+      onSave(formData);
       form.reset();
       onOpenChange(false);
       toast({
