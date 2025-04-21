@@ -289,14 +289,14 @@ const InventoryList = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Department</label>
                   <Select 
-                    value={departmentFilter || ""} 
-                    onValueChange={(value) => setDepartmentFilter(value || null)}
+                    value={departmentFilter || "all"} 
+                    onValueChange={(value) => setDepartmentFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Departments" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Departments</SelectItem>
+                      <SelectItem value="all">All Departments</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                       ))}
@@ -306,14 +306,14 @@ const InventoryList = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Status</label>
                   <Select 
-                    value={statusFilter || ""} 
-                    onValueChange={(value) => setStatusFilter(value || null)}
+                    value={statusFilter || "all"} 
+                    onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Statuses</SelectItem>
+                      <SelectItem value="all">All Statuses</SelectItem>
                       {statuses.map((status) => (
                         <SelectItem key={status} value={status}>{status}</SelectItem>
                       ))}
@@ -322,8 +322,7 @@ const InventoryList = () => {
                 </div>
                 {(departmentFilter || statusFilter) && (
                   <Button 
-                    variant="outline" 
-                    size="sm" 
+                    variant="ghost" 
                     className="w-full" 
                     onClick={clearFilters}
                   >
@@ -335,127 +334,108 @@ const InventoryList = () => {
             </PopoverContent>
           </Popover>
           
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setImportDialogOpen(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
             <FileUp className="mr-2 h-4 w-4" />
-            Import
+            Import CSV
           </Button>
           
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleExportCSV}
-            disabled={filteredData.length === 0}
-          >
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <FileDown className="mr-2 h-4 w-4" />
-            Export
+            Export CSV
           </Button>
           
-          <Button
-            onClick={() => setAddDialogOpen(true)}
-          >
+          <Button onClick={() => setAddDialogOpen(true)}>
             <Package className="mr-2 h-4 w-4" />
             Add Item
           </Button>
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-lg border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>SKU</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead className="w-[80px]">SKU</TableHead>
+              <TableHead>Item</TableHead>
               <TableHead>Department</TableHead>
               <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Status</TableHead>
-              <TableHead className="text-right">Last Updated</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length > 0 ? (
+            {filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  No inventory items found.
+                </TableCell>
+              </TableRow>
+            ) : (
               filteredData.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.sku}</TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                  <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.department}</TableCell>
                   <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
                     <Badge className={getStatusColor(item.status)}>
                       {item.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">{item.lastUpdated}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => startEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => confirmDelete(item)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {item.lastUpdated}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => startEdit(item)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => confirmDelete(item)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No items found.
-                </TableCell>
-              </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      
+
       {/* Add/Edit Item Dialog */}
-      {addDialogOpen && (
-        <AddEditItemDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          onSave={handleAddItem}
-        />
-      )}
-      
-      {/* Edit Item Dialog */}
-      {editingItem && (
-        <AddEditItemDialog
-          open={!!editingItem}
-          onOpenChange={(open) => !open && setEditingItem(undefined)}
-          onSave={handleEditItem}
-          item={editingItem}
-        />
-      )}
-      
+      <AddEditItemDialog
+        open={addDialogOpen || !!editingItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddDialogOpen(false);
+            setEditingItem(undefined);
+          }
+        }}
+        onSave={editingItem ? handleEditItem : handleAddItem}
+        item={editingItem}
+      />
+
       {/* Import CSV Dialog */}
       <ImportCSVDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImport={handleImportCSV}
       />
-      
+
       {/* Delete Confirmation Dialog */}
-      {itemToDelete && (
-        <DeleteConfirmDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={handleDeleteItem}
-          itemName={itemToDelete.name}
-        />
-      )}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteItem}
+        itemName={itemToDelete?.name || ""}
+      />
     </div>
   );
 };
