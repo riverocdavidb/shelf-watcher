@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -121,6 +122,20 @@ const mockInventoryItems: InventoryItem[] = [
   },
 ];
 
+// Define a type for the raw stock movement data from Supabase
+type RawStockMovement = {
+  id: string;
+  item_id: string;
+  quantity: number;
+  type: string;
+  created_at: string;
+  employee_id?: string | null;
+  notes?: string | null;
+  inventory_items?: {
+    name?: string;
+  } | null;
+};
+
 export const fetchStockMovements = async (): Promise<StockMovement[]> => {
   // Try fetching from Supabase
   try {
@@ -134,13 +149,11 @@ export const fetchStockMovements = async (): Promise<StockMovement[]> => {
     }
 
     if (supabaseData && supabaseData.length > 0) {
-      return supabaseData.map(movement => {
-        // Safe access to nested properties
-        const itemName = movement.inventory_items && 
-          typeof movement.inventory_items === 'object' && 
-          'name' in movement.inventory_items ? 
-          movement.inventory_items.name as string : 'Unknown Item';
-          
+      // Cast the data to our defined type to handle the structure properly
+      return (supabaseData as RawStockMovement[]).map(movement => {
+        // Safe access to nested properties with proper nullability checks
+        const itemName = movement.inventory_items?.name || 'Unknown Item';
+        
         return {
           id: movement.id,
           itemId: movement.item_id,
@@ -148,7 +161,7 @@ export const fetchStockMovements = async (): Promise<StockMovement[]> => {
           type: movement.type as 'received' | 'sold' | 'damaged' | 'stolen' | 'adjustment',
           quantity: movement.quantity,
           date: movement.created_at,
-          employeeName: movement.employee_name || 'System',
+          employeeName: movement.employee_id ? `Employee ${movement.employee_id}` : 'System',
         };
       });
     }
