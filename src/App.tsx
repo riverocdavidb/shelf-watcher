@@ -14,6 +14,7 @@ import Investigation from "./pages/Investigation";
 import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
 import Auth from "./pages/Auth";
+import DevSeedAll from "./pages/DevSeedAll";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -91,6 +92,7 @@ const App = () => (
               </RequireAuth>
             }
           />
+          <Route path="/dev-seed-all" element={<DevSeedAll />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
