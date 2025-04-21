@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import InventoryList from "./InventoryList";
 import StockMovement from "./StockMovement";
+import InventoryDashboard from "./InventoryDashboard";
+import { Badge } from "@/components/ui/badge";
 
 const InventoryManagement = () => {
   return (
@@ -17,15 +19,27 @@ const InventoryManagement = () => {
       </div>
 
       <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full md:w-auto grid-cols-2">
+        <TabsList className="grid w-full md:w-auto grid-cols-3">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="list">Inventory List</TabsTrigger>
-          <TabsTrigger value="movement">Stock Movement</TabsTrigger>
+          <TabsTrigger value="movement">
+            Stock Movement
+            <Badge variant="outline" className="ml-2 bg-primary text-primary-foreground">New</Badge>
+          </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="dashboard">
+          <Card className="p-4">
+            <InventoryDashboard />
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="list">
           <Card className="p-4">
             <InventoryList />
           </Card>
         </TabsContent>
+        
         <TabsContent value="movement">
           <Card className="p-4">
             <StockMovement />
