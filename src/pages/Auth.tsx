@@ -53,22 +53,20 @@ export default function Auth() {
     }
 
     try {
-      // Using explicit typing to avoid excessive type instantiation
-      const { data, error: checkError } = await supabase
+      // Fixed approach: use separate get call with explicit typing to avoid excessive type instantiation
+      const { count, error: countError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .limit(1)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error("Error checking username:", checkError);
+        .select('*', { count: 'exact', head: true })
+        .eq('username', username);
+      
+      if (countError) {
+        console.error("Error checking username:", countError);
         setError("Error checking username availability");
         setLoading(false);
         return;
       }
 
-      if (data) {
+      if (count && count > 0) {
         setError("Username already taken");
         setLoading(false);
         return;
