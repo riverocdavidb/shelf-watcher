@@ -62,7 +62,8 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
       
-      const { error: signupError } = await supabase.auth.signUp({
+      // Fix excessive type instantiation by using a simpler structure
+      const signupData = {
         email: demoEmail,
         password: demoPassword,
         options: {
@@ -73,7 +74,9 @@ export default function Auth() {
             user_id,
           },
         },
-      });
+      };
+      
+      const { error: signupError } = await supabase.auth.signUp(signupData);
       
       if (signupError) {
         console.error("Demo signup error:", signupError);
@@ -134,8 +137,8 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
 
-      // Sign up the user - fixed excessive type instantiation issue by simplifying options
-      const { error } = await supabase.auth.signUp({
+      // Fix excessive type instantiation by using a simpler structure
+      const signupData = {
         email,
         password,
         options: {
@@ -146,7 +149,10 @@ export default function Auth() {
             user_id
           }
         }
-      });
+      };
+
+      // Sign up the user with simpler options structure
+      const { error } = await supabase.auth.signUp(signupData);
 
       if (error) {
         setError(error.message);

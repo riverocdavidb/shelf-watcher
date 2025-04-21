@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { InventoryItem } from "./AddEditItemDialog";
 import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
@@ -76,14 +76,14 @@ const InventoryList = () => {
             sku: data.sku,
             name: data.name,
             department: data.department,
-            quantity: Number(data.quantity),
+            quantity: data.quantity, // Now accepts number directly
             status: data.status,
             last_updated: today
           })
           .eq("id", editingItem.id);
           
         if (error) throw error;
-        toast({ title: "Success", description: "Item updated successfully" });
+        toast("Success: Item updated successfully");
       } else {
         // Add new item
         const { error } = await supabase
@@ -92,14 +92,14 @@ const InventoryList = () => {
             sku: data.sku,
             name: data.name,
             department: data.department,
-            quantity: Number(data.quantity),
+            quantity: data.quantity, // Now accepts number directly
             status: data.status,
             last_updated: today,
             user_id: "00000000-0000-0000-0000-000000000000" // Default user ID for demo
           });
           
         if (error) throw error;
-        toast({ title: "Success", description: "Item added successfully" });
+        toast("Success: Item added successfully");
       }
       
       // Refresh data after changes
@@ -107,11 +107,7 @@ const InventoryList = () => {
       
     } catch (err) {
       console.error("Error saving inventory item:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to save item", 
-        variant: "destructive" 
-      });
+      toast("Error: Failed to save item");
     }
   };
 
@@ -127,15 +123,11 @@ const InventoryList = () => {
         
       if (error) throw error;
       
-      toast({ title: "Success", description: "Item deleted successfully" });
+      toast("Success: Item deleted successfully");
       refetch();
     } catch (err) {
       console.error("Error deleting inventory item:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to delete item", 
-        variant: "destructive" 
-      });
+      toast("Error: Failed to delete item");
     }
   };
 
@@ -152,15 +144,15 @@ const InventoryList = () => {
     const dbItems = items.map(item => ({
       ...item,
       last_updated: today,
-      // Convert quantity to number for the database
-      quantity: Number(item.quantity),
+      quantity: item.quantity, // Now accepts number directly
       user_id: "00000000-0000-0000-0000-000000000000",
     }));
+    
     const { error } = await supabase.from("inventory_items").insert(dbItems);
     if (error) {
-      toast({ title: "Import Failed", description: "Failed to import CSV." });
+      toast("Import Failed: Failed to import CSV.");
     } else {
-      toast({ title: "Import Successful", description: `${dbItems.length} items imported.` });
+      toast(`Import Successful: ${dbItems.length} items imported.`);
       refetch();
     }
   };
@@ -188,10 +180,7 @@ const InventoryList = () => {
     link.click();
     document.body.removeChild(link);
 
-    toast({
-      title: "CSV Export Successful",
-      description: `${filteredData.length} items exported to CSV.`,
-    });
+    toast("CSV Export Successful: " + `${filteredData.length} items exported to CSV.`);
   };
 
   return (
@@ -243,4 +232,5 @@ const InventoryList = () => {
   );
 };
 
+// Add default export to fix the error
 export default InventoryList;
