@@ -64,15 +64,17 @@ export function useAuth() {
       if (error) {
         console.error('Error fetching user profile:', error);
       } else if (data) {
+        // Only set properties that exist in the data object
         setProfile({
           id: data.id,
-          user_id: data.user_id,
-          username: data.username,
           first_name: data.first_name,
           last_name: data.last_name,
           email: user?.email || undefined,
           created_at: data.created_at,
           updated_at: data.updated_at,
+          // Only set these if they exist in the data
+          ...(data.user_id !== undefined && { user_id: data.user_id }),
+          ...(data.username !== undefined && { username: data.username })
         });
       }
     } catch (error) {
