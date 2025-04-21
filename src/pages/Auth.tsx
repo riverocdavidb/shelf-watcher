@@ -111,11 +111,12 @@ export default function Auth() {
     }
 
     try {
-      // Fixed approach: use separate get call with explicit typing to avoid excessive type instantiation
-      const { count, error: countError } = await supabase
+      // Use count query pattern to avoid excessive type instantiation
+      const { data, error: countError } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('username', username);
+        .select('id')
+        .eq('username', username)
+        .limit(1);
       
       if (countError) {
         console.error("Error checking username:", countError);
@@ -124,7 +125,7 @@ export default function Auth() {
         return;
       }
 
-      if (count && count > 0) {
+      if (data && data.length > 0) {
         setError("Username already taken");
         setLoading(false);
         return;
