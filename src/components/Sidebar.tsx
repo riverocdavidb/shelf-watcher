@@ -1,8 +1,8 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +15,9 @@ import {
   List,
   Search,
 } from "lucide-react";
+
+// Store 'collapsed' state in localStorage for consistency
+const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -31,6 +34,9 @@ const SidebarItem = ({
   active = false,
   collapsed = false,
 }: SidebarItemProps) => {
+  const location = useLocation();
+  const isActive = to ? location.pathname === to : false;
+
   const content = (
     <div className={cn("flex items-center", collapsed ? "justify-center" : "")}>
       <div className="mr-2">{icon}</div>
@@ -71,7 +77,14 @@ const SidebarItem = ({
 };
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    const val = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return val === null ? true : val === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+  }, [collapsed]);
 
   return (
     <div
@@ -87,7 +100,7 @@ const Sidebar = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => setCollapsed((c) => !c)}
           className="hover:bg-shrink-blue hover:text-white ml-auto"
         >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}

@@ -9,7 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      inventory_items: {
+        Row: {
+          department: string | null
+          id: string
+          last_updated: string
+          name: string
+          quantity: number
+          sku: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          department?: string | null
+          id?: string
+          last_updated?: string
+          name: string
+          quantity?: number
+          sku?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          department?: string | null
+          id?: string
+          last_updated?: string
+          name?: string
+          quantity?: number
+          sku?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          auto_sync: boolean
+          created_at: string
+          id: string
+          store_name: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_sync?: boolean
+          created_at?: string
+          id?: string
+          store_name?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_sync?: boolean
+          created_at?: string
+          id?: string
+          store_name?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
