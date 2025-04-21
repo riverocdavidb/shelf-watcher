@@ -61,25 +61,21 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
       
-      // Simplified approach to fix excessive type instantiation
-      try {
-        const result = await supabase.auth.signUp({
-          email: demoEmail,
-          password: demoPassword,
-          options: {
-            data: {
-              first_name: "Demo",
-              last_name: "User",
-              username: "demolover",
-              user_id,
-            }
+      // Fix excessive type instantiation by simplifying the structure
+      const { error: signupError } = await supabase.auth.signUp({
+        email: demoEmail,
+        password: demoPassword,
+        options: {
+          data: {
+            first_name: "Demo",
+            last_name: "User",
+            username: "demolover",
+            user_id,
           }
-        });
-        
-        if (result.error) {
-          throw result.error;
         }
-      } catch (signupError: any) {
+      });
+      
+      if (signupError) {
         console.error("Demo signup error:", signupError);
         setError("Failed to create demo account: " + signupError.message);
         setLoading(false);
@@ -138,31 +134,29 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
 
-      // Simplified approach to fix excessive type instantiation
-      try {
-        const result = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-              username,
-              user_id
-            }
+      // Fix excessive type instantiation by simplifying the structure
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            username,
+            user_id
           }
-        });
-        
-        if (result.error) {
-          throw result.error;
         }
-        
-        toast.success("Account created successfully! Please check your email for verification.");
-        // Switch to login view after successful signup
-        setView("login");
-      } catch (error: any) {
+      });
+
+      if (error) {
         setError(error.message);
+        setLoading(false);
+        return;
       }
+
+      toast.success("Account created successfully! Please check your email for verification.");
+      // Switch to login view after successful signup
+      setView("login");
     } catch (e) {
       console.error("Signup error:", e);
       setError("An unexpected error occurred");

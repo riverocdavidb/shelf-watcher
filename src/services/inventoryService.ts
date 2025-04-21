@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 
 // Types for inventory data
@@ -40,8 +41,8 @@ export interface ShrinkageReason {
   value: number;
 }
 
-// Export mock data so it can be imported to Supabase
-export const mockInventoryItems: InventoryItem[] = [
+// Mock data service until connected to a backend
+const mockInventoryItems: InventoryItem[] = [
   {
     id: '1',
     name: 'Organic Apples',
@@ -107,6 +108,7 @@ const mockStockMovements: StockMovement[] = [
   },
 ];
 
+// These match what's in TrendAnalysis.tsx but will be pulled from the API
 const shrinkageData: ShrinkageData[] = [
   { month: "Jan", shrinkage: 8450, sales: 124000 },
   { month: "Feb", shrinkage: 7800, sales: 128000 },
