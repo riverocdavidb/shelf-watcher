@@ -9,279 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      audits: {
-        Row: {
-          assigned_to: string | null
-          created_at: string | null
-          created_by: string | null
-          department: string
-          end_date: string | null
-          id: string
-          start_date: string
-          status: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department: string
-          end_date?: string | null
-          id?: string
-          start_date: string
-          status?: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department?: string
-          end_date?: string | null
-          id?: string
-          start_date?: string
-          status?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      department_shrinkage: {
-        Row: {
-          avg_rate: number
-          id: string
-          month: string
-          name: string
-          shrinkage_rate: number
-          year: number
-        }
-        Insert: {
-          avg_rate: number
-          id?: string
-          month: string
-          name: string
-          shrinkage_rate: number
-          year: number
-        }
-        Update: {
-          avg_rate?: number
-          id?: string
-          month?: string
-          name?: string
-          shrinkage_rate?: number
-          year?: number
-        }
-        Relationships: []
-      }
-      high_risk_items: {
-        Row: {
-          created_at: string | null
-          id: string
-          item_id: string
-          risk_score: number
-          updated_at: string | null
-          value_at_risk: number
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          item_id: string
-          risk_score: number
-          updated_at?: string | null
-          value_at_risk: number
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          item_id?: string
-          risk_score?: number
-          updated_at?: string | null
-          value_at_risk?: number
-        }
-        Relationships: []
-      }
       inventory_items: {
         Row: {
-          cost_price: number | null
           department: string | null
-          expected_stock: number | null
           id: string
           last_updated: string
           name: string
           quantity: number
-          retail_price: number | null
           sku: string | null
           status: string
           user_id: string
         }
         Insert: {
-          cost_price?: number | null
           department?: string | null
-          expected_stock?: number | null
           id?: string
           last_updated?: string
           name: string
           quantity?: number
-          retail_price?: number | null
           sku?: string | null
           status?: string
           user_id: string
         }
         Update: {
-          cost_price?: number | null
           department?: string | null
-          expected_stock?: number | null
           id?: string
           last_updated?: string
           name?: string
           quantity?: number
-          retail_price?: number | null
           sku?: string | null
           status?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      inventory_status: {
-        Row: {
-          department: string
-          discrepancies: number
-          id: string
-          shrinkage_rate: number
-          status: string
-          total_items: number
-          tracked_items: number
-          updated_at: string | null
-        }
-        Insert: {
-          department: string
-          discrepancies?: number
-          id?: string
-          shrinkage_rate?: number
-          status: string
-          total_items?: number
-          tracked_items?: number
-          updated_at?: string | null
-        }
-        Update: {
-          department?: string
-          discrepancies?: number
-          id?: string
-          shrinkage_rate?: number
-          status?: string
-          total_items?: number
-          tracked_items?: number
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      investigations: {
-        Row: {
-          assigned_to: string | null
-          created_at: string | null
-          created_by: string | null
-          department: string | null
-          description: string | null
-          id: string
-          loss_amount: number | null
-          priority: string
-          status: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department?: string | null
-          description?: string | null
-          id?: string
-          loss_amount?: number | null
-          priority?: string
-          status?: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department?: string | null
-          description?: string | null
-          id?: string
-          loss_amount?: number | null
-          priority?: string
-          status?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      loss_alerts: {
-        Row: {
-          amount: number | null
-          assigned_to: string | null
-          description: string | null
-          id: string
-          item_id: string | null
-          reported_at: string | null
-          reported_by: string | null
-          severity: string
-          status: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          amount?: number | null
-          assigned_to?: string | null
-          description?: string | null
-          id?: string
-          item_id?: string | null
-          reported_at?: string | null
-          reported_by?: string | null
-          severity: string
-          status?: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number | null
-          assigned_to?: string | null
-          description?: string | null
-          id?: string
-          item_id?: string | null
-          reported_at?: string | null
-          reported_by?: string | null
-          severity?: string
-          status?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      monthly_shrinkage: {
-        Row: {
-          id: string
-          month: string
-          sales: number
-          shrinkage: number
-          year: number
-        }
-        Insert: {
-          id?: string
-          month: string
-          sales: number
-          shrinkage: number
-          year?: number
-        }
-        Update: {
-          id?: string
-          month?: string
-          sales?: number
-          shrinkage?: number
-          year?: number
         }
         Relationships: []
       }
@@ -306,96 +63,6 @@ export type Database = {
           id?: string
           last_name?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      recommended_actions: {
-        Row: {
-          action: string
-          high_risk_item_id: string
-          id: string
-        }
-        Insert: {
-          action: string
-          high_risk_item_id: string
-          id?: string
-        }
-        Update: {
-          action?: string
-          high_risk_item_id?: string
-          id?: string
-        }
-        Relationships: []
-      }
-      risk_factors: {
-        Row: {
-          factor: string
-          high_risk_item_id: string
-          id: string
-        }
-        Insert: {
-          factor: string
-          high_risk_item_id: string
-          id?: string
-        }
-        Update: {
-          factor?: string
-          high_risk_item_id?: string
-          id?: string
-        }
-        Relationships: []
-      }
-      shrinkage_reasons: {
-        Row: {
-          id: string
-          month: string | null
-          name: string
-          value: number
-          year: number
-        }
-        Insert: {
-          id?: string
-          month?: string | null
-          name: string
-          value: number
-          year?: number
-        }
-        Update: {
-          id?: string
-          month?: string | null
-          name?: string
-          value?: number
-          year?: number
-        }
-        Relationships: []
-      }
-      stock_movements: {
-        Row: {
-          created_at: string | null
-          employee_id: string | null
-          id: string
-          item_id: string
-          notes: string | null
-          quantity: number
-          type: string
-        }
-        Insert: {
-          created_at?: string | null
-          employee_id?: string | null
-          id?: string
-          item_id: string
-          notes?: string | null
-          quantity: number
-          type: string
-        }
-        Update: {
-          created_at?: string | null
-          employee_id?: string | null
-          id?: string
-          item_id?: string
-          notes?: string | null
-          quantity?: number
-          type?: string
         }
         Relationships: []
       }
