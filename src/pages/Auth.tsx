@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,8 +61,8 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
       
-      // Fix excessive type instantiation by using a simpler structure
-      const signupData = {
+      // Fix excessive type instantiation by simplifying the structure
+      const { error: signupError } = await supabase.auth.signUp({
         email: demoEmail,
         password: demoPassword,
         options: {
@@ -72,11 +71,9 @@ export default function Auth() {
             last_name: "User",
             username: "demolover",
             user_id,
-          },
-        },
-      };
-      
-      const { error: signupError } = await supabase.auth.signUp(signupData);
+          }
+        }
+      });
       
       if (signupError) {
         console.error("Demo signup error:", signupError);
@@ -137,8 +134,8 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
 
-      // Fix excessive type instantiation by using a simpler structure
-      const signupData = {
+      // Fix excessive type instantiation by simplifying the structure
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -149,10 +146,7 @@ export default function Auth() {
             user_id
           }
         }
-      };
-
-      // Sign up the user with simpler options structure
-      const { error } = await supabase.auth.signUp(signupData);
+      });
 
       if (error) {
         setError(error.message);

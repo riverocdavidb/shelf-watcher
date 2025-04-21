@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
 import InventoryDialogs from "./InventoryDialogs";
 
+// Add default export to fix the error
 const InventoryList = () => {
   // State management
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,11 +77,11 @@ const InventoryList = () => {
             sku: data.sku,
             name: data.name,
             department: data.department,
-            quantity: data.quantity, // Now accepts number directly
+            quantity: data.quantity, 
             status: data.status,
             last_updated: today
           })
-          .eq("id", editingItem.id);
+          .eq("id", editingItem.id.toString()); // Convert number to string
           
         if (error) throw error;
         toast("Success: Item updated successfully");
@@ -92,7 +93,7 @@ const InventoryList = () => {
             sku: data.sku,
             name: data.name,
             department: data.department,
-            quantity: data.quantity, // Now accepts number directly
+            quantity: data.quantity,
             status: data.status,
             last_updated: today,
             user_id: "00000000-0000-0000-0000-000000000000" // Default user ID for demo
@@ -119,7 +120,7 @@ const InventoryList = () => {
       const { error } = await supabase
         .from("inventory_items")
         .delete()
-        .eq("id", itemToDelete.id);
+        .eq("id", itemToDelete.id.toString()); // Convert number to string
         
       if (error) throw error;
       
@@ -144,7 +145,7 @@ const InventoryList = () => {
     const dbItems = items.map(item => ({
       ...item,
       last_updated: today,
-      quantity: item.quantity, // Now accepts number directly
+      quantity: item.quantity,
       user_id: "00000000-0000-0000-0000-000000000000",
     }));
     
