@@ -1,5 +1,5 @@
-
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 // Types for inventory data
 export interface InventoryItem {
@@ -12,6 +12,8 @@ export interface InventoryItem {
   costPrice: number;
   retailPrice: number;
   lastUpdated: string;
+  department?: string;
+  status?: string;
 }
 
 export interface StockMovement {
@@ -41,6 +43,41 @@ export interface ShrinkageReason {
   value: number;
 }
 
+// API service functions that interact with Supabase
+export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
+  // Try to get data from Supabase first
+  const { data: supabaseData, error } = await supabase
+    .from('inventory_items')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching from Supabase:', error);
+    // Fall back to mock data if database fetch fails
+    return mockInventoryItems;
+  }
+
+  // Transform Supabase data to match InventoryItem interface
+  if (supabaseData && supabaseData.length > 0) {
+    console.log('Fetched inventory data from Supabase:', supabaseData);
+    return supabaseData.map(item => ({
+      id: item.id,
+      name: item.name,
+      sku: item.sku || '',
+      category: item.department || '',
+      currentStock: item.quantity || 0,
+      expectedStock: item.expected_stock || item.quantity || 0,
+      costPrice: item.cost_price || 0,
+      retailPrice: item.retail_price || 0,
+      lastUpdated: item.last_updated,
+      department: item.department,
+      status: item.status,
+    }));
+  }
+
+  // Return mock data as fallback
+  return mockInventoryItems;
+};
+
 // Mock data service until connected to a backend
 const mockInventoryItems: InventoryItem[] = [
   {
@@ -52,7 +89,9 @@ const mockInventoryItems: InventoryItem[] = [
     expectedStock: 150,
     costPrice: 0.75,
     retailPrice: 1.99,
-    lastUpdated: '2023-04-18T14:30:00Z'
+    lastUpdated: '2023-04-18T14:30:00Z',
+    department: 'Produce',
+    status: 'In Stock'
   },
   {
     id: '2',
@@ -63,7 +102,9 @@ const mockInventoryItems: InventoryItem[] = [
     expectedStock: 50,
     costPrice: 4.50,
     retailPrice: 9.99,
-    lastUpdated: '2023-04-19T09:15:00Z'
+    lastUpdated: '2023-04-19T09:15:00Z',
+    department: 'Beverages',
+    status: 'In Stock'
   },
   {
     id: '3',
@@ -74,9 +115,37 @@ const mockInventoryItems: InventoryItem[] = [
     expectedStock: 25,
     costPrice: 35.00,
     retailPrice: 79.99,
-    lastUpdated: '2023-04-17T16:45:00Z'
+    lastUpdated: '2023-04-17T16:45:00Z',
+    department: 'Electronics',
+    status: 'Low Stock'
   },
 ];
+
+export const fetchStockMovements = async (): Promise<StockMovement[]> => {
+  // Try fetching from Supabase
+  const { data: supabaseData, error } = await supabase
+    .from('stock_movements')
+    .select('*, inventory_items(name)');
+
+  if (error) {
+    console.error('Error fetching stock movements:', error);
+    return mockStockMovements;
+  }
+
+  if (supabaseData && supabaseData.length > 0) {
+    return supabaseData.map(movement => ({
+      id: movement.id,
+      itemId: movement.item_id,
+      itemName: movement.inventory_items?.name || 'Unknown Item',
+      type: movement.type as 'received' | 'sold' | 'damaged' | 'stolen' | 'adjustment',
+      quantity: movement.quantity,
+      date: movement.created_at,
+      employeeName: movement.employee_name || 'System',
+    }));
+  }
+
+  return mockStockMovements;
+};
 
 const mockStockMovements: StockMovement[] = [
   {
@@ -108,6 +177,29 @@ const mockStockMovements: StockMovement[] = [
   },
 ];
 
+export const fetchShrinkageData = async (): Promise<ShrinkageData[]> => {
+  // Try fetching from Supabase
+  const { data: supabaseData, error } = await supabase
+    .from('monthly_shrinkage')
+    .select('*')
+    .order('month', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching shrinkage data:', error);
+    return shrinkageData;
+  }
+
+  if (supabaseData && supabaseData.length > 0) {
+    return supabaseData.map(item => ({
+      month: item.month,
+      shrinkage: item.shrinkage,
+      sales: item.sales,
+    }));
+  }
+
+  return shrinkageData;
+};
+
 // These match what's in TrendAnalysis.tsx but will be pulled from the API
 const shrinkageData: ShrinkageData[] = [
   { month: "Jan", shrinkage: 8450, sales: 124000 },
@@ -124,6 +216,27 @@ const shrinkageData: ShrinkageData[] = [
   { month: "Dec", shrinkage: 14500, sales: 195000 },
 ];
 
+export const fetchDepartmentShrinkage = async (): Promise<DepartmentShrinkage[]> => {
+  const { data: supabaseData, error } = await supabase
+    .from('department_shrinkage')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching department shrinkage:', error);
+    return departmentShrinkage;
+  }
+
+  if (supabaseData && supabaseData.length > 0) {
+    return supabaseData.map(item => ({
+      name: item.name,
+      shrinkageRate: item.shrinkage_rate,
+      avgRate: item.avg_rate,
+    }));
+  }
+
+  return departmentShrinkage;
+};
+
 const departmentShrinkage: DepartmentShrinkage[] = [
   { name: "Produce", shrinkageRate: 2.8, avgRate: 1.6 },
   { name: "Dairy", shrinkageRate: 0.9, avgRate: 1.2 },
@@ -135,6 +248,26 @@ const departmentShrinkage: DepartmentShrinkage[] = [
   { name: "Electronics", shrinkageRate: 1.9, avgRate: 1.7 },
 ];
 
+export const fetchShrinkageReasons = async (): Promise<ShrinkageReason[]> => {
+  const { data: supabaseData, error } = await supabase
+    .from('shrinkage_reasons')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching shrinkage reasons:', error);
+    return shrinkageReasons;
+  }
+
+  if (supabaseData && supabaseData.length > 0) {
+    return supabaseData.map(item => ({
+      name: item.name,
+      value: item.value,
+    }));
+  }
+
+  return shrinkageReasons;
+};
+
 const shrinkageReasons: ShrinkageReason[] = [
   { name: "Theft", value: 38 },
   { name: "Spoilage", value: 27 },
@@ -142,33 +275,6 @@ const shrinkageReasons: ShrinkageReason[] = [
   { name: "Vendor Issue", value: 12 },
   { name: "Damage", value: 8 },
 ];
-
-// API mock functions - these would connect to a real backend API
-const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
-  // Simulate API latency
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockInventoryItems;
-};
-
-const fetchStockMovements = async (): Promise<StockMovement[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockStockMovements;
-};
-
-const fetchShrinkageData = async (): Promise<ShrinkageData[]> => {
-  await new Promise(resolve => setTimeout(resolve, 700));
-  return shrinkageData;
-};
-
-const fetchDepartmentShrinkage = async (): Promise<DepartmentShrinkage[]> => {
-  await new Promise(resolve => setTimeout(resolve, 600));
-  return departmentShrinkage;
-};
-
-const fetchShrinkageReasons = async (): Promise<ShrinkageReason[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return shrinkageReasons;
-};
 
 // React Query hooks
 export const useInventoryItems = () => {

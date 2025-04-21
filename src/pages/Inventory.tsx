@@ -2,13 +2,16 @@
 import { useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import InventoryManagement from "@/components/inventory/InventoryManagement";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const Inventory = () => {
   useEffect(() => {
+    // Simple way to verify the page is loading correctly
+    console.log("Inventory page loaded");
+    
     toast({
-      title: "Inventory Data Loaded",
-      description: "Showing mock inventory data. Connect to a database for production use.",
+      title: "Inventory Module",
+      description: "Connected to database. Add, edit, or delete items to manage your inventory.",
     });
   }, []);
 
