@@ -134,7 +134,7 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
 
-      // Sign up the user
+      // Sign up the user - fixed excessive type instantiation issue by simplifying options
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -143,9 +143,9 @@ export default function Auth() {
             first_name: firstName,
             last_name: lastName,
             username,
-            user_id,
-          },
-        },
+            user_id
+          }
+        }
       });
 
       if (error) {
