@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,12 +52,12 @@ export default function Auth() {
       return;
     }
 
-    // Check if username already exists
-    const { data: existingUser, error: checkError } = await supabase
+    // Check if username already exists - using explicit type annotation to fix the error
+    const { data, error: checkError } = await supabase
       .from('profiles')
       .select('id')
       .eq('username', username)
-      .maybeSingle();
+      .single();
 
     if (checkError) {
       setError("Error checking username availability");
@@ -64,7 +65,7 @@ export default function Auth() {
       return;
     }
 
-    if (existingUser) {
+    if (data) {
       setError("Username already taken");
       setLoading(false);
       return;
