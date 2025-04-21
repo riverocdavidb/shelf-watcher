@@ -53,14 +53,15 @@ export default function Auth() {
     }
 
     try {
-      // Check if username already exists - avoiding type inference issues
+      // Using explicit typing to avoid excessive type instantiation
       const { data, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', username)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
-      if (checkError) {
+      if (checkError && checkError.code !== 'PGRST116') {
         console.error("Error checking username:", checkError);
         setError("Error checking username availability");
         setLoading(false);
