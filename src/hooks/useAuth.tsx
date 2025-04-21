@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -65,6 +66,8 @@ export function useAuth() {
       } else if (data) {
         setProfile({
           id: data.id,
+          user_id: data.user_id,
+          username: data.username,
           first_name: data.first_name,
           last_name: data.last_name,
           email: user?.email || undefined,

@@ -52,52 +52,59 @@ export default function Auth() {
       return;
     }
 
-    // Check if username already exists - using explicit type annotation to fix the error
-    const { data, error: checkError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .single();
+    try {
+      // Check if username already exists - using maybeSingle to fix the error
+      const { data, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
 
-    if (checkError) {
-      setError("Error checking username availability");
-      setLoading(false);
-      return;
-    }
+      if (checkError) {
+        console.error("Error checking username:", checkError);
+        setError("Error checking username availability");
+        setLoading(false);
+        return;
+      }
 
-    if (data) {
-      setError("Username already taken");
-      setLoading(false);
-      return;
-    }
+      if (data) {
+        setError("Username already taken");
+        setLoading(false);
+        return;
+      }
 
-    // Generate a unique user_id
-    const user_id = generateUserId();
+      // Generate a unique user_id
+      const user_id = generateUserId();
 
-    // Sign up the user
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          username,
-          user_id,
+      // Sign up the user
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            username,
+            user_id,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Account created successfully! Please check your email for verification.");
+      // Switch to login view after successful signup
+      setView("login");
+    } catch (e) {
+      console.error("Signup error:", e);
+      setError("An unexpected error occurred");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    toast.success("Account created successfully! Please check your email for verification.");
-    // Switch to login view after successful signup
-    setView("login");
-    setLoading(false);
   }
 
   return (
