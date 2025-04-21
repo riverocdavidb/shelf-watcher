@@ -114,7 +114,7 @@ export type Database = {
           retail_price: number | null
           sku: string | null
           status: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           cost_price?: number | null
@@ -127,7 +127,7 @@ export type Database = {
           retail_price?: number | null
           sku?: string | null
           status?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           cost_price?: number | null
@@ -140,7 +140,7 @@ export type Database = {
           retail_price?: number | null
           sku?: string | null
           status?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -292,6 +292,8 @@ export type Database = {
           id: string
           last_name: string | null
           updated_at: string
+          user_id: string | null
+          username: string | null
         }
         Insert: {
           created_at?: string
@@ -299,6 +301,8 @@ export type Database = {
           id: string
           last_name?: string | null
           updated_at?: string
+          user_id?: string | null
+          username?: string | null
         }
         Update: {
           created_at?: string
@@ -306,6 +310,8 @@ export type Database = {
           id?: string
           last_name?: string | null
           updated_at?: string
+          user_id?: string | null
+          username?: string | null
         }
         Relationships: []
       }

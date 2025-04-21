@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, FileText, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Status color
 const statusColor = (status: string) => {
   if (status === "Complete") return "bg-green-100 text-green-800";
   if (status === "In Progress") return "bg-yellow-100 text-yellow-800";
@@ -56,9 +57,9 @@ export default function AuditsTable() {
             <TableRow>
               <TableHead>Audit</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Auditor</TableHead>
+              <TableHead>Assigned To</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Findings</TableHead>
+              {/* Removed Findings (no 'findings' column in audits table) */}
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -72,14 +73,9 @@ export default function AuditsTable() {
                       {audit.status}
                     </span>
                   </TableCell>
-                  <TableCell>{audit.auditor || "N/A"}</TableCell>
+                  {/* 'assigned_to' instead of 'auditor' */}
+                  <TableCell>{audit.assigned_to || "N/A"}</TableCell>
                   <TableCell>{audit.start_date ? new Date(audit.start_date).toLocaleDateString() : ""}</TableCell>
-                  <TableCell>
-                    {audit.findings > 0
-                      ? <span className="text-red-600 font-bold">{audit.findings}</span>
-                      : <span className="text-gray-500">None</span>
-                    }
-                  </TableCell>
                   <TableCell>
                     <Button size="sm" variant="ghost" className="gap-1">
                       <FileText className="h-4 w-4" /> Report
@@ -92,7 +88,7 @@ export default function AuditsTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   No audits found.
                 </TableCell>
               </TableRow>

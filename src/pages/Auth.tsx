@@ -44,25 +44,20 @@ export default function Auth() {
   async function handleDemoLogin() {
     setLoading(true);
     setError(null);
-    
-    // Demo credentials - use a real-looking email that will pass validation
+
     const demoEmail = "demo_user@mailinator.com";
     const demoPassword = "demo123456";
-    
+
     // Try to login with demo credentials
-    const { error: loginError } = await supabase.auth.signInWithPassword({ 
-      email: demoEmail, 
-      password: demoPassword 
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password: demoPassword
     });
-    
-    // If login fails (first time), create the demo account
+
     if (loginError) {
       console.log("Creating demo account...");
-      
-      // Generate a unique user_id
       const user_id = generateUserId();
-      
-      // Fix excessive type instantiation by simplifying the structure
+
       const signUpData = {
         email: demoEmail,
         password: demoPassword,
@@ -75,29 +70,29 @@ export default function Auth() {
           }
         }
       };
-      
+
       const { error: signupError } = await supabase.auth.signUp(signUpData);
-      
+
       if (signupError) {
         console.error("Demo signup error:", signupError);
         setError("Failed to create demo account: " + signupError.message);
         setLoading(false);
         return;
       }
-      
+
       // Try login again after account creation
-      const { error: retryError } = await supabase.auth.signInWithPassword({ 
-        email: demoEmail, 
-        password: demoPassword 
+      const { error: retryError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword
       });
-      
+
       if (retryError) {
         setError("Demo login failed after account creation: " + retryError.message);
         setLoading(false);
         return;
       }
     }
-    
+
     // Successful login
     navigate("/");
   }
@@ -114,13 +109,13 @@ export default function Auth() {
     }
 
     try {
-      // Use count query pattern to avoid excessive type instantiation
+      // Check if username already exists in profiles
       const { data, error: countError } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', username)
         .limit(1);
-      
+
       if (countError) {
         console.error("Error checking username:", countError);
         setError("Error checking username availability");
@@ -137,7 +132,7 @@ export default function Auth() {
       // Generate a unique user_id
       const user_id = generateUserId();
 
-      // Fix excessive type instantiation by simplifying the structure
+      // Avoid excessive type instantiation
       const signUpData = {
         email,
         password,
@@ -227,19 +222,19 @@ export default function Auth() {
             {view === "login" ? "Sign In" : "Sign Up"}
           </Button>
         </form>
-        
+
         {/* Demo user button */}
         <div className="mt-4">
-          <Button 
-            variant="secondary" 
-            className="w-full" 
-            onClick={handleDemoLogin} 
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleDemoLogin}
             disabled={loading}
           >
             Sign in as Demo User
           </Button>
         </div>
-        
+
         <div className="mt-4 flex flex-col items-center gap-1">
           {view === "login" ? (
             <span>

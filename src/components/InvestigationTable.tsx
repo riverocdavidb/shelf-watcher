@@ -65,7 +65,7 @@ export default function InvestigationTable() {
               <TableHead>Status</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Date Opened</TableHead>
-              <TableHead>Items</TableHead>
+              <TableHead>Loss Amount</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -82,7 +82,14 @@ export default function InvestigationTable() {
                   </TableCell>
                   <TableCell>{row.assigned_to || "N/A"}</TableCell>
                   <TableCell>{row.created_at ? new Date(row.created_at).toLocaleDateString() : ""}</TableCell>
-                  <TableCell>{row.items || "N/A"}</TableCell>
+                  {/* Instead of items, use loss_amount (since no "items" column) */}
+                  <TableCell>
+                    {row.loss_amount != null ? (
+                      <span className="text-blue-900">${row.loss_amount}</span>
+                    ) : (
+                      <span className="text-gray-400">N/A</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded ${priorityColor(row.priority)} text-xs font-semibold`}>
                       {row.priority}
