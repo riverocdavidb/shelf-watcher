@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NavLink } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
+  to?: string;
   active?: boolean;
   collapsed?: boolean;
 }
@@ -25,10 +27,34 @@ interface SidebarItemProps {
 const SidebarItem = ({
   icon,
   label,
+  to,
   active = false,
   collapsed = false,
 }: SidebarItemProps) => {
-  return (
+  const content = (
+    <div className={cn("flex items-center", collapsed ? "justify-center" : "")}>
+      <div className="mr-2">{icon}</div>
+      {!collapsed && <span>{label}</span>}
+    </div>
+  );
+
+  return to ? (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "w-full justify-start py-6 flex",
+          collapsed ? "px-2" : "px-4",
+          isActive
+            ? "bg-primary/10 text-primary hover:bg-primary/20"
+            : "hover:bg-primary/5"
+        )
+      }
+      end
+    >
+      {content}
+    </NavLink>
+  ) : (
     <Button
       variant="ghost"
       className={cn(
@@ -39,10 +65,7 @@ const SidebarItem = ({
           : "hover:bg-primary/5"
       )}
     >
-      <div className={cn("flex items-center", collapsed ? "justify-center" : "")}>
-        <div className="mr-2">{icon}</div>
-        {!collapsed && <span>{label}</span>}
-      </div>
+      {content}
     </Button>
   );
 };
@@ -75,42 +98,49 @@ const Sidebar = () => {
         <SidebarItem
           icon={<LayoutDashboard className="h-5 w-5" />}
           label="Dashboard"
-          active={true}
+          to="/"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<ShoppingCart className="h-5 w-5" />}
           label="Inventory"
+          to="/inventory"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<AlertTriangle className="h-5 w-5" />}
           label="Loss Alerts"
+          to="/loss-alerts"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<BarChart className="h-5 w-5" />}
           label="Analytics"
+          to="/analytics"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<List className="h-5 w-5" />}
           label="Audits"
+          to="/audits"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<Search className="h-5 w-5" />}
           label="Investigation"
+          to="/investigation"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<Settings className="h-5 w-5" />}
           label="Settings"
+          to="/settings"
           collapsed={collapsed}
         />
         <SidebarItem
           icon={<User className="h-5 w-5" />}
           label="User Management"
+          to="/user-management"
           collapsed={collapsed}
         />
       </div>
