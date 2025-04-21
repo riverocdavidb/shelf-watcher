@@ -11,7 +11,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
+import { toast } from "sonner";
 
 const getBadgeColor = (status: string) => {
   switch (status) {
@@ -26,6 +27,64 @@ const getBadgeColor = (status: string) => {
   }
 };
 
+// Sample data to use when database is empty
+const sampleInventoryStatus = [
+  {
+    id: '1',
+    department: 'Produce',
+    total_items: 325,
+    tracked_items: 310,
+    discrepancies: 15,
+    shrinkage_rate: 4.6,
+    status: 'Warning'
+  },
+  {
+    id: '2',
+    department: 'Meat & Seafood',
+    total_items: 189,
+    tracked_items: 175,
+    discrepancies: 14,
+    shrinkage_rate: 7.4,
+    status: 'Critical'
+  },
+  {
+    id: '3',
+    department: 'Dairy',
+    total_items: 210,
+    tracked_items: 208,
+    discrepancies: 2,
+    shrinkage_rate: 0.95,
+    status: 'Good'
+  },
+  {
+    id: '4',
+    department: 'Bakery',
+    total_items: 150,
+    tracked_items: 146,
+    discrepancies: 4,
+    shrinkage_rate: 2.6,
+    status: 'Warning'
+  },
+  {
+    id: '5',
+    department: 'Frozen Foods',
+    total_items: 278,
+    tracked_items: 275,
+    discrepancies: 3,
+    shrinkage_rate: 1.1,
+    status: 'Good'
+  },
+  {
+    id: '6',
+    department: 'Beverages',
+    total_items: 195,
+    tracked_items: 192,
+    discrepancies: 3,
+    shrinkage_rate: 1.5,
+    status: 'Good'
+  }
+];
+
 const InventoryStatus = () => {
   const { data: inventoryStatusData = [], isLoading } = useQuery({
     queryKey: ["inventory_status"],
@@ -34,12 +93,43 @@ const InventoryStatus = () => {
         .from("inventory_status")
         .select("*");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching inventory status:", error);
+        throw error;
+      }
+
+      // If no data, populate the table with sample data
+      if (!data || data.length === 0) {
+        console.log("No inventory status data found, using sample data.");
+        
+        // Optionally, we can insert the sample data into the database
+        try {
+          const { error: insertError } = await supabase
+            .from("inventory_status")
+            .insert(sampleInventoryStatus);
+            
+          if (insertError) {
+            console.error("Error inserting sample data:", insertError);
+          } else {
+            console.log("Successfully inserted sample data.");
+          }
+        } catch (e) {
+          console.error("Exception when inserting sample data:", e);
+        }
+        
+        return sampleInventoryStatus;
+      }
 
       return data || [];
     },
     staleTime: 1000 * 60,
   });
+
+  useEffect(() => {
+    if (inventoryStatusData.length > 0) {
+      console.log("Loaded inventory status data:", inventoryStatusData);
+    }
+  }, [inventoryStatusData]);
 
   // Compute aggregated summary values:
   const trackingRate = useMemo(() => {
@@ -51,7 +141,6 @@ const InventoryStatus = () => {
 
   const compliantDepartments = useMemo(() => {
     if (!inventoryStatusData.length) return 0;
-    // Using the mock's 6 departments baseline
     const compliantCount = inventoryStatusData.filter(d => d.discrepancies <= 5).length;
     return compliantCount;
   }, [inventoryStatusData]);
@@ -123,20 +212,30 @@ const InventoryStatus = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventoryStatusData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.department}</TableCell>
-                  <TableCell className="text-right">{item.total_items}</TableCell>
-                  <TableCell className="text-right">{item.tracked_items}</TableCell>
-                  <TableCell className="text-right">{item.discrepancies}</TableCell>
-                  <TableCell className="text-right">{item.shrinkage_rate.toFixed(1)}%</TableCell>
-                  <TableCell className="text-right">
-                    <Badge className={`${getBadgeColor(item.status)}`}>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">Loading inventory data...</TableCell>
                 </TableRow>
-              ))}
+              ) : inventoryStatusData.length > 0 ? (
+                inventoryStatusData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.department}</TableCell>
+                    <TableCell className="text-right">{item.total_items}</TableCell>
+                    <TableCell className="text-right">{item.tracked_items}</TableCell>
+                    <TableCell className="text-right">{item.discrepancies}</TableCell>
+                    <TableCell className="text-right">{item.shrinkage_rate.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      <Badge className={`${getBadgeColor(item.status)}`}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">No inventory data available.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

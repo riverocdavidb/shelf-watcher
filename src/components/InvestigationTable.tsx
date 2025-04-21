@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, FileSearch, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const statusColor = (status: string) => {
   if (status === "Open") return "bg-red-100 text-red-800";
@@ -20,10 +21,65 @@ const priorityColor = (priority: string) => {
   return "bg-gray-100 text-gray-800";
 };
 
+// Sample investigation data
+const sampleInvestigations = [
+  {
+    id: '1',
+    title: 'Missing electronics inventory',
+    status: 'Open',
+    assigned_to: 'John Smith',
+    created_at: '2025-04-15T08:30:00Z',
+    loss_amount: 1250.75,
+    priority: 'High',
+    department: 'Electronics'
+  },
+  {
+    id: '2',
+    title: 'Cosmetics department shrinkage',
+    status: 'In Progress',
+    assigned_to: 'Maria Garcia',
+    created_at: '2025-04-10T14:15:00Z',
+    loss_amount: 750.25,
+    priority: 'Medium',
+    department: 'Health & Beauty'
+  },
+  {
+    id: '3',
+    title: 'Register 4 cash discrepancy',
+    status: 'Closed',
+    assigned_to: 'David Johnson',
+    created_at: '2025-04-05T16:45:00Z',
+    loss_amount: 124.50,
+    priority: 'Low',
+    department: 'Front End'
+  },
+  {
+    id: '4',
+    title: 'Receiving dock inventory missing',
+    status: 'Open',
+    assigned_to: 'Sarah Williams',
+    created_at: '2025-04-12T09:20:00Z',
+    loss_amount: 3200.00,
+    priority: 'High',
+    department: 'Receiving'
+  },
+  {
+    id: '5',
+    title: 'Dairy department expired product',
+    status: 'In Progress',
+    assigned_to: 'Robert Brown',
+    created_at: '2025-04-08T11:30:00Z',
+    loss_amount: 425.75,
+    priority: 'Medium',
+    department: 'Dairy'
+  }
+];
+
 export default function InvestigationTable() {
   const [search, setSearch] = useState("");
+  const [dataInitialized, setDataInitialized] = useState(false);
 
-  const { data: investigations = [], isLoading, error } = useQuery({
+  const { data: investigations = [], isLoading, error, refetch } = useQuery({
     queryKey: ['investigations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,9 +89,57 @@ export default function InvestigationTable() {
         .limit(50);
 
       if (error) throw error;
+      
+      // If no data, return sample data
+      if (!data || data.length === 0) {
+        console.log("No investigation data found, using sample data.");
+        return sampleInvestigations;
+      }
+      
       return data || [];
     },
   });
+  
+  // Populate the table with sample data if it's empty
+  useEffect(() => {
+    const initializeData = async () => {
+      if (dataInitialized) return;
+      
+      try {
+        const { count, error: countError } = await supabase
+          .from("investigations")
+          .select("*", { count: 'exact', head: true });
+          
+        if (countError) {
+          console.error("Error checking investigation count:", countError);
+          return;
+        }
+        
+        // If no data exists, insert sample data
+        if (count === 0) {
+          console.log("No investigation data found, inserting sample data");
+          
+          const { error: insertError } = await supabase
+            .from("investigations")
+            .insert(sampleInvestigations);
+            
+          if (insertError) {
+            console.error("Error inserting sample investigation data:", insertError);
+          } else {
+            console.log("Successfully inserted sample investigation data.");
+            toast.success("Sample investigation data has been added for demonstration");
+            refetch();
+          }
+        }
+        
+        setDataInitialized(true);
+      } catch (e) {
+        console.error("Exception when initializing investigation data:", e);
+      }
+    };
+    
+    initializeData();
+  }, [dataInitialized, refetch]);
 
   const filtered = investigations.filter(row =>
     row.title.toLowerCase().includes(search.toLowerCase())
@@ -82,7 +186,6 @@ export default function InvestigationTable() {
                   </TableCell>
                   <TableCell>{row.assigned_to || "N/A"}</TableCell>
                   <TableCell>{row.created_at ? new Date(row.created_at).toLocaleDateString() : ""}</TableCell>
-                  {/* Instead of items, use loss_amount (since no "items" column) */}
                   <TableCell>
                     {row.loss_amount != null ? (
                       <span className="text-blue-900">${row.loss_amount}</span>
