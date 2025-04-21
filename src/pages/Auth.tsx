@@ -45,8 +45,8 @@ export default function Auth() {
     setLoading(true);
     setError(null);
     
-    // Demo credentials
-    const demoEmail = "demo@example.com";
+    // Demo credentials - use a real-looking email that will pass validation
+    const demoEmail = "demo_user@mailinator.com";
     const demoPassword = "demo123456";
     
     // Try to login with demo credentials
