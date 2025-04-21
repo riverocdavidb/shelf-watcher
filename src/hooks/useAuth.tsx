@@ -64,18 +64,26 @@ export function useAuth() {
       if (error) {
         console.error('Error fetching user profile:', error);
       } else if (data) {
-        // Only set properties that exist in the data object
-        setProfile({
+        // Create the profile with only the guaranteed fields from the database schema
+        const profileData: UserProfile = {
           id: data.id,
           first_name: data.first_name,
           last_name: data.last_name,
-          email: user?.email || undefined,
           created_at: data.created_at,
           updated_at: data.updated_at,
-          // Only set these if they exist in the data
-          ...(data.user_id !== undefined && { user_id: data.user_id }),
-          ...(data.username !== undefined && { username: data.username })
-        });
+          email: user?.email || undefined
+        };
+        
+        // Add optional fields only if they exist in the returned data
+        if ('user_id' in data) {
+          profileData.user_id = data.user_id as string;
+        }
+        
+        if ('username' in data) {
+          profileData.username = data.username as string;
+        }
+        
+        setProfile(profileData);
       }
     } catch (error) {
       console.error('Exception fetching user profile:', error);

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +53,7 @@ export default function Auth() {
     }
 
     try {
-      // Check if username already exists - using maybeSingle to fix the error
+      // Check if username already exists - avoiding type inference issues
       const { data, error: checkError } = await supabase
         .from('profiles')
         .select('id')
