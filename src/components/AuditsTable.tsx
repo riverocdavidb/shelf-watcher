@@ -1,43 +1,10 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, FileText, Search } from "lucide-react";
-
-const mockAudits = [
-  {
-    id: 1,
-    name: "April Inventory Check",
-    status: "Complete",
-    auditor: "Maria Smith",
-    date: "2025-04-14",
-    findings: 3,
-  },
-  {
-    id: 2,
-    name: "March Cycle Count",
-    status: "In Progress",
-    auditor: "Eric Ray",
-    date: "2025-03-22",
-    findings: 0,
-  },
-  {
-    id: 3,
-    name: "Surprise Audit",
-    status: "Discrepancy Found",
-    auditor: "J. Lee",
-    date: "2025-02-15",
-    findings: 7,
-  },
-  {
-    id: 4,
-    name: "Annual Compliance Review",
-    status: "Complete",
-    auditor: "M. O'Neil",
-    date: "2024-12-05",
-    findings: 0,
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const statusColor = (status: string) => {
   if (status === "Complete") return "bg-green-100 text-green-800";
@@ -49,9 +16,26 @@ const statusColor = (status: string) => {
 export default function AuditsTable() {
   const [search, setSearch] = useState("");
 
-  const filtered = mockAudits.filter((audit) =>
-    audit.name.toLowerCase().includes(search.toLowerCase())
+  const { data: audits = [], isLoading, error } = useQuery({
+    queryKey: ['audits'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audits")
+        .select("*")
+        .order("start_date", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filtered = audits.filter((audit) =>
+    audit.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (isLoading) return <div>Loading audits...</div>;
+  if (error) return <div>Error loading audits</div>;
 
   return (
     <div>
@@ -80,16 +64,16 @@ export default function AuditsTable() {
           </TableHeader>
           <TableBody>
             {filtered.length ? (
-              filtered.map((audit) => (
+              filtered.map(audit => (
                 <TableRow key={audit.id}>
-                  <TableCell>{audit.name}</TableCell>
+                  <TableCell>{audit.title}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded ${statusColor(audit.status)} text-xs font-semibold`}>
                       {audit.status}
                     </span>
                   </TableCell>
-                  <TableCell>{audit.auditor}</TableCell>
-                  <TableCell>{audit.date}</TableCell>
+                  <TableCell>{audit.auditor || "N/A"}</TableCell>
+                  <TableCell>{audit.start_date ? new Date(audit.start_date).toLocaleDateString() : ""}</TableCell>
                   <TableCell>
                     {audit.findings > 0
                       ? <span className="text-red-600 font-bold">{audit.findings}</span>

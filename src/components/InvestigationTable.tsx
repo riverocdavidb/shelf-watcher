@@ -1,38 +1,10 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, FileSearch, X } from "lucide-react";
-
-const mockCases = [
-  {
-    id: 100,
-    incident: "Stolen Laptops",
-    status: "Open",
-    owner: "Eric Ray",
-    opened: "2025-04-11",
-    items: 5,
-    priority: "High",
-  },
-  {
-    id: 101,
-    incident: "Damaged Dairy Case",
-    status: "In Progress",
-    owner: "Olivia Wong",
-    opened: "2025-04-10",
-    items: 1,
-    priority: "Medium",
-  },
-  {
-    id: 102,
-    incident: "Missing Inventory Audit #201",
-    status: "Closed",
-    owner: "Maria S.",
-    opened: "2025-04-01",
-    items: 12,
-    priority: "Low",
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const statusColor = (status: string) => {
   if (status === "Open") return "bg-red-100 text-red-800";
@@ -51,9 +23,26 @@ const priorityColor = (priority: string) => {
 export default function InvestigationTable() {
   const [search, setSearch] = useState("");
 
-  const filtered = mockCases.filter((row) =>
-    row.incident.toLowerCase().includes(search.toLowerCase())
+  const { data: investigations = [], isLoading, error } = useQuery({
+    queryKey: ['investigations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("investigations")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filtered = investigations.filter(row =>
+    row.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (isLoading) return <div>Loading investigations...</div>;
+  if (error) return <div>Error loading investigations</div>;
 
   return (
     <div>
@@ -83,17 +72,17 @@ export default function InvestigationTable() {
           </TableHeader>
           <TableBody>
             {filtered.length ? (
-              filtered.map((row) => (
+              filtered.map(row => (
                 <TableRow key={row.id}>
-                  <TableCell>{row.incident}</TableCell>
+                  <TableCell>{row.title}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded ${statusColor(row.status)} text-xs font-semibold`}>
                       {row.status}
                     </span>
                   </TableCell>
-                  <TableCell>{row.owner}</TableCell>
-                  <TableCell>{row.opened}</TableCell>
-                  <TableCell>{row.items}</TableCell>
+                  <TableCell>{row.assigned_to || "N/A"}</TableCell>
+                  <TableCell>{row.created_at ? new Date(row.created_at).toLocaleDateString() : ""}</TableCell>
+                  <TableCell>{row.items || "N/A"}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded ${priorityColor(row.priority)} text-xs font-semibold`}>
                       {row.priority}

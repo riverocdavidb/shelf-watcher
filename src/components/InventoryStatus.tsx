@@ -9,63 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-
-const inventoryData = [
-  {
-    id: 1,
-    department: "Produce",
-    totalItems: 245,
-    trackedItems: 230,
-    discrepancies: 15,
-    shrinkageRate: 1.2,
-    status: "Warning",
-  },
-  {
-    id: 2,
-    department: "Dairy",
-    totalItems: 178,
-    trackedItems: 178,
-    discrepancies: 3,
-    shrinkageRate: 0.6,
-    status: "Good",
-  },
-  {
-    id: 3,
-    department: "Meat & Seafood",
-    totalItems: 126,
-    trackedItems: 122,
-    discrepancies: 8,
-    shrinkageRate: 2.4,
-    status: "Critical",
-  },
-  {
-    id: 4,
-    department: "Bakery",
-    totalItems: 94,
-    trackedItems: 91,
-    discrepancies: 7,
-    shrinkageRate: 1.8,
-    status: "Warning",
-  },
-  {
-    id: 5,
-    department: "Frozen Foods",
-    totalItems: 210,
-    trackedItems: 210,
-    discrepancies: 2,
-    shrinkageRate: 0.4,
-    status: "Good",
-  },
-  {
-    id: 6,
-    department: "Beverages",
-    totalItems: 132,
-    trackedItems: 132,
-    discrepancies: 5,
-    shrinkageRate: 0.9,
-    status: "Good",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 const getBadgeColor = (status: string) => {
   switch (status) {
@@ -81,6 +27,42 @@ const getBadgeColor = (status: string) => {
 };
 
 const InventoryStatus = () => {
+  const { data: inventoryStatusData = [], isLoading } = useQuery({
+    queryKey: ["inventory_status"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_status")
+        .select("*");
+
+      if (error) throw error;
+
+      return data || [];
+    },
+    staleTime: 1000 * 60,
+  });
+
+  // Compute aggregated summary values:
+  const trackingRate = useMemo(() => {
+    if (!inventoryStatusData.length) return 0;
+    const totalTracked = inventoryStatusData.reduce((acc, d) => acc + d.tracked_items, 0);
+    const totalItems = inventoryStatusData.reduce((acc, d) => acc + d.total_items, 0);
+    return totalItems > 0 ? (totalTracked / totalItems) * 100 : 0;
+  }, [inventoryStatusData]);
+
+  const compliantDepartments = useMemo(() => {
+    if (!inventoryStatusData.length) return 0;
+    // Using the mock's 6 departments baseline
+    const compliantCount = inventoryStatusData.filter(d => d.discrepancies <= 5).length;
+    return compliantCount;
+  }, [inventoryStatusData]);
+
+  const totalDepartmentsCount = inventoryStatusData.length || 6;
+
+  const totalDiscrepancies = useMemo(() => {
+    if (!inventoryStatusData.length) return 0;
+    return inventoryStatusData.reduce((acc, d) => acc + d.discrepancies, 0);
+  }, [inventoryStatusData]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -97,10 +79,10 @@ const InventoryStatus = () => {
               Inventory Tracking Rate
             </div>
             <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">98.2%</div>
+              <div className="text-2xl font-bold">{trackingRate.toFixed(1)}%</div>
               <div className="text-green-600 text-sm font-medium">+0.5%</div>
             </div>
-            <Progress value={98.2} className="h-2 mt-2" />
+            <Progress value={trackingRate} className="h-2 mt-2" />
           </div>
           
           <div className="bg-white p-4 rounded-lg border">
@@ -108,10 +90,12 @@ const InventoryStatus = () => {
               Department Compliance
             </div>
             <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">5/6</div>
-              <div className="text-yellow-600 text-sm font-medium">83.3%</div>
+              <div className="text-2xl font-bold">{compliantDepartments}/{totalDepartmentsCount}</div>
+              <div className="text-yellow-600 text-sm font-medium">
+                {totalDepartmentsCount > 0 ? ((compliantDepartments*100)/totalDepartmentsCount).toFixed(1) : "0"}%
+              </div>
             </div>
-            <Progress value={83.3} className="h-2 mt-2" />
+            <Progress value={totalDepartmentsCount > 0 ? (compliantDepartments*100)/totalDepartmentsCount : 0} className="h-2 mt-2" />
           </div>
           
           <div className="bg-white p-4 rounded-lg border">
@@ -119,14 +103,14 @@ const InventoryStatus = () => {
               Total Discrepancies
             </div>
             <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">40</div>
+              <div className="text-2xl font-bold">{totalDiscrepancies}</div>
               <div className="text-red-600 text-sm font-medium">+12</div>
             </div>
-            <Progress value={40} max={100} className="h-2 mt-2 bg-gray-100" />
+            <Progress value={totalDiscrepancies} max={100} className="h-2 mt-2 bg-gray-100" />
           </div>
         </div>
         
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -139,13 +123,13 @@ const InventoryStatus = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventoryData.map((item) => (
+              {inventoryStatusData.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.department}</TableCell>
-                  <TableCell className="text-right">{item.totalItems}</TableCell>
-                  <TableCell className="text-right">{item.trackedItems}</TableCell>
+                  <TableCell className="text-right">{item.total_items}</TableCell>
+                  <TableCell className="text-right">{item.tracked_items}</TableCell>
                   <TableCell className="text-right">{item.discrepancies}</TableCell>
-                  <TableCell className="text-right">{item.shrinkageRate}%</TableCell>
+                  <TableCell className="text-right">{item.shrinkage_rate.toFixed(1)}%</TableCell>
                   <TableCell className="text-right">
                     <Badge className={`${getBadgeColor(item.status)}`}>
                       {item.status}

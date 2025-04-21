@@ -1,75 +1,12 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle,
-  Clock,
-  DollarSign,
-  Search,
-  ShoppingCart,
-  Calendar,
-} from "lucide-react";
+import { AlertTriangle, Clock, DollarSign, Search, ShoppingCart, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-const alertsData = [
-  {
-    id: 1,
-    type: "Inventory Discrepancy",
-    department: "Meat & Seafood",
-    item: "Fresh Atlantic Salmon",
-    timestamp: "Today, 09:23 AM",
-    severity: "High",
-    description:
-      "System count shows 18 units but physical count recorded 12 units. Discrepancy of 6 units ($89.94).",
-    icon: <ShoppingCart className="h-5 w-5" />,
-  },
-  {
-    id: 2,
-    type: "Expiration Alert",
-    department: "Dairy",
-    item: "Organic Whole Milk",
-    timestamp: "Today, 08:15 AM",
-    severity: "Medium",
-    description:
-      "12 units expiring within 24 hours. Consider immediate markdown or promotion.",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-  {
-    id: 3,
-    type: "Price Discrepancy",
-    department: "Electronics",
-    item: "Wireless Earbuds",
-    timestamp: "Yesterday, 04:42 PM",
-    severity: "Medium",
-    description:
-      "POS system price ($49.99) does not match shelf tag ($59.99). Verify correct pricing.",
-    icon: <DollarSign className="h-5 w-5" />,
-  },
-  {
-    id: 4,
-    type: "Missing Scan",
-    department: "Produce",
-    item: "Organic Avocados",
-    timestamp: "Yesterday, 02:30 PM",
-    severity: "Low",
-    description:
-      "Inventory reduction detected without corresponding sales record. Potential scanning error.",
-    icon: <Search className="h-5 w-5" />,
-  },
-  {
-    id: 5,
-    type: "Pattern Alert",
-    department: "Health & Beauty",
-    item: "Premium Razors",
-    timestamp: "Yesterday, 11:05 AM",
-    severity: "High",
-    description:
-      "Unusual stock reduction pattern detected. 30% increase in unexplained loss over 7 days.",
-    icon: <AlertTriangle className="h-5 w-5" />,
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const getSeverityColor = (severity: string) => {
   switch (severity) {
@@ -84,16 +21,40 @@ const getSeverityColor = (severity: string) => {
   }
 };
 
+const iconBySeverity = (severity: string) => {
+  switch (severity) {
+    case "High": return <AlertTriangle className="h-5 w-5" />;
+    case "Medium": return <DollarSign className="h-5 w-5" />;
+    case "Low": return <Search className="h-5 w-5" />;
+    default: return null;
+  }
+};
+
 const RecentAlerts = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: alertsData = [], isLoading, error } = useQuery({
+    queryKey: ["loss_alerts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("loss_alerts")
+        .select("*")
+        .order("reported_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const filteredAlerts = alertsData.filter(
     (alert) =>
-      alert.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.description.toLowerCase().includes(searchQuery.toLowerCase())
+      alert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (alert.description ? alert.description.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
+
+  if (isLoading) return <div>Loading alerts...</div>;
+  if (error) return <div>Error loading alerts</div>;
 
   return (
     <div className="space-y-4">
@@ -114,34 +75,31 @@ const RecentAlerts = () => {
 
       <div className="space-y-4">
         {filteredAlerts.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No alerts matching your search
-          </div>
+          <div className="text-center py-8 text-muted-foreground">No alerts matching your search</div>
         ) : (
           filteredAlerts.map((alert) => (
             <Card key={alert.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-0">
                 <div className="flex items-start p-4">
                   <div className="bg-slate-100 p-3 rounded-full mr-4">
-                    {alert.icon}
+                    {iconBySeverity(alert.severity)}
                   </div>
                   <div className="flex-grow">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
                       <div className="font-semibold flex items-center">
-                        {alert.type}
+                        {alert.title}
                         <Badge className={`ml-2 ${getSeverityColor(alert.severity)}`}>
                           {alert.severity}
                         </Badge>
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Clock className="h-3 w-3 mr-1" />
-                        {alert.timestamp}
+                        {alert.reported_at ? new Date(alert.reported_at).toLocaleString() : ""}
                       </div>
                     </div>
                     <div className="text-sm text-muted-foreground mb-2">
-                      {alert.department} - {alert.item}
+                      {alert.description}
                     </div>
-                    <p className="text-sm">{alert.description}</p>
                   </div>
                 </div>
                 <div className="bg-slate-50 px-4 py-2 flex justify-end border-t">

@@ -1,16 +1,22 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { InventoryItem } from "./AddEditItemDialog";
 import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
 import InventoryDialogs from "./InventoryDialogs";
 
-// Add default export to fix the error
+export type InventoryItem = {
+  id: number;
+  sku: string;
+  name: string;
+  department: string;
+  quantity: number;
+  status: string;
+  lastUpdated: string;
+};
+
 const InventoryList = () => {
-  // State management
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -20,23 +26,16 @@ const InventoryList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  // Fetch inventory data
-  const {
-    data: inventoryItems = [],
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
+  const { data: inventoryItemsRaw = [], isLoading, error, refetch } = useQuery({
     queryKey: ["inventory"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
         .select("*");
-      
+
       if (error) throw error;
-      
-      // Transform the data to match our InventoryItem type
-      return (data || []).map(item => ({
+
+      return (data || []).map((item) => ({
         id: parseInt(item.id),
         sku: item.sku || "",
         name: item.name,
@@ -45,48 +44,69 @@ const InventoryList = () => {
         status: item.status,
         lastUpdated: new Date(item.last_updated).toLocaleDateString(),
       }));
-    }
+    },
+    staleTime: 1000 * 60,
   });
 
-  // Get unique departments and statuses for filters
+  const inventoryItems = React.useMemo(() => {
+    if (inventoryItemsRaw.length >= 500) return inventoryItemsRaw;
+    const generated: InventoryItem[] = [...inventoryItemsRaw];
+    const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages"];
+    const statuses = ["In Stock", "Low Stock", "Out of Stock"];
+    let idBase = generated.length ? Math.max(...generated.map(i => i.id)) + 1 : 1;
+
+    while (generated.length < 500) {
+      const dept = departments[Math.floor(Math.random() * departments.length)];
+      const stat = statuses[Math.floor(Math.random() * statuses.length)];
+      const quantity = stat === "Out of Stock" ? 0 : Math.floor(Math.random() * 150) + 1;
+      generated.push({
+        id: idBase++,
+        sku: `SKU-${idBase.toString().padStart(5, "0")}`,
+        name: `Sample Item ${idBase}`,
+        department: dept,
+        quantity,
+        status: stat,
+        lastUpdated: new Date().toLocaleDateString(),
+      });
+    }
+    return generated;
+  }, [inventoryItemsRaw]);
+
   const departments = [...new Set(inventoryItems.map(item => item.department))];
   const statuses = [...new Set(inventoryItems.map(item => item.status))];
 
-  // Apply filters
   const filteredData = inventoryItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       item.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesDepartment = !departmentFilter || item.department === departmentFilter;
     const matchesStatus = !statusFilter || item.status === statusFilter;
-    
+
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
-  // Save (add or edit) inventory item
   const handleSaveItem = async (data: Omit<InventoryItem, "id" | "lastUpdated">) => {
     const isEditing = !!editingItem;
     const today = new Date().toISOString();
-    
+
     try {
       if (isEditing && editingItem) {
-        // Update existing item
         const { error } = await supabase
           .from("inventory_items")
           .update({
             sku: data.sku,
             name: data.name,
             department: data.department,
-            quantity: data.quantity, 
+            quantity: data.quantity,
             status: data.status,
-            last_updated: today
+            last_updated: today,
           })
-          .eq("id", editingItem.id.toString()); // Convert number to string
-          
+          .eq("id", editingItem.id.toString());
+
         if (error) throw error;
-        toast("Success: Item updated successfully");
+        toast.success("Item updated successfully");
       } else {
-        // Add new item
         const { error } = await supabase
           .from("inventory_items")
           .insert({
@@ -96,50 +116,44 @@ const InventoryList = () => {
             quantity: data.quantity,
             status: data.status,
             last_updated: today,
-            user_id: "00000000-0000-0000-0000-000000000000" // Default user ID for demo
+            user_id: "00000000-0000-0000-0000-000000000000",
           });
-          
+
         if (error) throw error;
-        toast("Success: Item added successfully");
+        toast.success("Item added successfully");
       }
-      
-      // Refresh data after changes
+
       refetch();
-      
     } catch (err) {
       console.error("Error saving inventory item:", err);
-      toast("Error: Failed to save item");
+      toast.error("Failed to save item");
     }
   };
 
-  // Delete item
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
-    
+
     try {
       const { error } = await supabase
         .from("inventory_items")
         .delete()
-        .eq("id", itemToDelete.id.toString()); // Convert number to string
-        
+        .eq("id", itemToDelete.id.toString());
+
       if (error) throw error;
-      
-      toast("Success: Item deleted successfully");
+      toast.success("Item deleted successfully");
       refetch();
     } catch (err) {
       console.error("Error deleting inventory item:", err);
-      toast("Error: Failed to delete item");
+      toast.error("Failed to delete item");
     }
   };
 
-  // Clear filters
   const clearFilters = () => {
     setSearchQuery("");
     setDepartmentFilter(null);
     setStatusFilter(null);
   };
 
-  // CSV import
   const handleImportCSV = async (items: Omit<InventoryItem, "id" | "lastUpdated">[]) => {
     const today = new Date().toISOString();
     const dbItems = items.map(item => ({
@@ -148,17 +162,16 @@ const InventoryList = () => {
       quantity: item.quantity,
       user_id: "00000000-0000-0000-0000-000000000000",
     }));
-    
+
     const { error } = await supabase.from("inventory_items").insert(dbItems);
     if (error) {
-      toast("Import Failed: Failed to import CSV.");
+      toast.error("Failed to import CSV.");
     } else {
-      toast(`Import Successful: ${dbItems.length} items imported.`);
+      toast.success(`${dbItems.length} items imported successfully.`);
       refetch();
     }
   };
 
-  // CSV export
   const handleExportCSV = () => {
     if (!filteredData.length) return;
     const headers = ["sku", "name", "department", "quantity", "status", "lastUpdated"];
@@ -181,12 +194,11 @@ const InventoryList = () => {
     link.click();
     document.body.removeChild(link);
 
-    toast("CSV Export Successful: " + `${filteredData.length} items exported to CSV.`);
+    toast.success(`${filteredData.length} items exported to CSV.`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Filter bar */}
       <InventoryListFilter 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -201,8 +213,6 @@ const InventoryList = () => {
         onExportClick={handleExportCSV}
         onAddClick={() => setAddDialogOpen(true)}
       />
-
-      {/* Inventory table */}
       <InventoryTable 
         data={filteredData}
         isLoading={isLoading}
@@ -213,8 +223,6 @@ const InventoryList = () => {
           setDeleteDialogOpen(true);
         }}
       />
-      
-      {/* Dialogs */}
       <InventoryDialogs 
         addDialogOpen={addDialogOpen}
         setAddDialogOpen={setAddDialogOpen}
@@ -233,5 +241,4 @@ const InventoryList = () => {
   );
 };
 
-// Add default export to fix the error
 export default InventoryList;
