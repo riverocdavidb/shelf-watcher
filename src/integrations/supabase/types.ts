@@ -46,22 +46,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audits_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       department_shrinkage: {
         Row: {
@@ -115,15 +100,7 @@ export type Database = {
           updated_at?: string | null
           value_at_risk?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "high_risk_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       inventory_items: {
         Row: {
@@ -240,22 +217,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "investigations_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "investigations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       loss_alerts: {
         Row: {
@@ -297,29 +259,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "loss_alerts_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loss_alerts_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loss_alerts_reported_by_fkey"
-            columns: ["reported_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       monthly_shrinkage: {
         Row: {
@@ -385,15 +325,7 @@ export type Database = {
           high_risk_item_id?: string
           id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "recommended_actions_high_risk_item_id_fkey"
-            columns: ["high_risk_item_id"]
-            isOneToOne: false
-            referencedRelation: "high_risk_items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       risk_factors: {
         Row: {
@@ -411,15 +343,7 @@ export type Database = {
           high_risk_item_id?: string
           id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "risk_factors_high_risk_item_id_fkey"
-            columns: ["high_risk_item_id"]
-            isOneToOne: false
-            referencedRelation: "high_risk_items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       shrinkage_reasons: {
         Row: {
@@ -473,22 +397,7 @@ export type Database = {
           quantity?: number
           type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "stock_movements_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_settings: {
         Row: {

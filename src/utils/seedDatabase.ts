@@ -1,4 +1,3 @@
-
 // Utility to seed all "module" tables with demo data for local/testing use.
 
 import { supabase } from "@/integrations/supabase/client";
@@ -193,6 +192,8 @@ const inventoryStatus = [
   { id: "invst-6", department: "Beverages", total_items: 132, tracked_items: 132, discrepancies: 5, shrinkage_rate: 0.9, status: "Good", updated_at: new Date().toISOString() },
 ];
 
+const DEVELOPER_USER_ID = "00000000-0000-0000-0000-000000000000"; // Use a fixed dummy user for mock data
+
 export async function seedDatabase() {
   // PROFILES
   for (const prof of demoProfiles) {
@@ -240,7 +241,7 @@ export async function seedDatabase() {
           department: it.department,
           quantity: it.quantity,
           status: it.status,
-          user_id: "user-3",
+          user_id: DEVELOPER_USER_ID, // Use the fixed dummy user ID for all demo items
           last_updated: today,
         },
       ]);
