@@ -56,9 +56,9 @@ export default function AuditsTable() {
             <TableRow>
               <TableHead>Audit</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Assigned To</TableHead>
+              <TableHead>Auditor</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Department</TableHead>
+              <TableHead>Findings</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -72,10 +72,13 @@ export default function AuditsTable() {
                       {audit.status}
                     </span>
                   </TableCell>
-                  <TableCell>{audit.assigned_to || "N/A"}</TableCell>
+                  <TableCell>{audit.auditor || "N/A"}</TableCell>
                   <TableCell>{audit.start_date ? new Date(audit.start_date).toLocaleDateString() : ""}</TableCell>
                   <TableCell>
-                    {audit.department || <span className="text-gray-500">None</span>}
+                    {audit.findings > 0
+                      ? <span className="text-red-600 font-bold">{audit.findings}</span>
+                      : <span className="text-gray-500">None</span>
+                    }
                   </TableCell>
                   <TableCell>
                     <Button size="sm" variant="ghost" className="gap-1">

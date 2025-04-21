@@ -1,123 +1,244 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { Edit, Trash2, Plus, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import InventoryTable from "./InventoryTable";
+import InventoryListFilter from "./InventoryListFilter";
+import InventoryDialogs from "./InventoryDialogs";
 
-// Inventory item type based on the Supabase schema
-type InventoryItem = {
-  id: string;
+export type InventoryItem = {
+  id: number;
+  sku: string;
   name: string;
-  sku: string | null;
+  department: string;
   quantity: number;
-  department: string | null;
   status: string;
-  cost_price: number | null;
-  retail_price: number | null;
-  expected_stock: number | null;
-  last_updated: string;
+  lastUpdated: string;
 };
 
-export default function InventoryList() {
-  const [search, setSearch] = useState("");
-  const [items, setItems] = useState<InventoryItem[]>([]);
+const InventoryList = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { data: inventoryData, isLoading, error } = useQuery({
-    queryKey: ['inventory'],
+  const { data: inventoryItemsRaw = [], isLoading, error, refetch } = useQuery({
+    queryKey: ["inventory"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
-        .select("*")
-        .order("last_updated", { ascending: false });
+        .select("*");
 
       if (error) throw error;
-      return data as InventoryItem[];
+
+      return (data || []).map((item) => ({
+        id: parseInt(item.id),
+        sku: item.sku || "",
+        name: item.name,
+        department: item.department || "",
+        quantity: item.quantity,
+        status: item.status,
+        lastUpdated: new Date(item.last_updated).toLocaleDateString(),
+      }));
     },
+    staleTime: 1000 * 60,
   });
 
-  useEffect(() => {
-    if (inventoryData) {
-      setItems(inventoryData);
+  const inventoryItems = React.useMemo(() => {
+    if (inventoryItemsRaw.length >= 500) return inventoryItemsRaw;
+    const generated: InventoryItem[] = [...inventoryItemsRaw];
+    const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages"];
+    const statuses = ["In Stock", "Low Stock", "Out of Stock"];
+    let idBase = generated.length ? Math.max(...generated.map(i => i.id)) + 1 : 1;
+
+    while (generated.length < 500) {
+      const dept = departments[Math.floor(Math.random() * departments.length)];
+      const stat = statuses[Math.floor(Math.random() * statuses.length)];
+      const quantity = stat === "Out of Stock" ? 0 : Math.floor(Math.random() * 150) + 1;
+      generated.push({
+        id: idBase++,
+        sku: `SKU-${idBase.toString().padStart(5, "0")}`,
+        name: `Sample Item ${idBase}`,
+        department: dept,
+        quantity,
+        status: stat,
+        lastUpdated: new Date().toLocaleDateString(),
+      });
     }
-  }, [inventoryData]);
+    return generated;
+  }, [inventoryItemsRaw]);
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase()) ||
-    (item.sku?.toLowerCase().includes(search.toLowerCase()) ?? false)
-  );
+  const departments = [...new Set(inventoryItems.map(item => item.department))];
+  const statuses = [...new Set(inventoryItems.map(item => item.status))];
 
-  if (isLoading) return <div>Loading inventory...</div>;
-  if (error) return <div>Error loading inventory</div>;
+  const filteredData = inventoryItems.filter(item => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      item.sku.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesDepartment = !departmentFilter || item.department === departmentFilter;
+    const matchesStatus = !statusFilter || item.status === statusFilter;
+
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
+
+  const handleSaveItem = async (data: Omit<InventoryItem, "id" | "lastUpdated">) => {
+    const isEditing = !!editingItem;
+    const today = new Date().toISOString();
+
+    try {
+      if (isEditing && editingItem) {
+        const { error } = await supabase
+          .from("inventory_items")
+          .update({
+            sku: data.sku,
+            name: data.name,
+            department: data.department,
+            quantity: data.quantity,
+            status: data.status,
+            last_updated: today,
+          })
+          .eq("id", editingItem.id.toString());
+
+        if (error) throw error;
+        toast.success("Item updated successfully");
+      } else {
+        const { error } = await supabase
+          .from("inventory_items")
+          .insert({
+            sku: data.sku,
+            name: data.name,
+            department: data.department,
+            quantity: data.quantity,
+            status: data.status,
+            last_updated: today,
+            user_id: "00000000-0000-0000-0000-000000000000",
+          });
+
+        if (error) throw error;
+        toast.success("Item added successfully");
+      }
+
+      refetch();
+    } catch (err) {
+      console.error("Error saving inventory item:", err);
+      toast.error("Failed to save item");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("inventory_items")
+        .delete()
+        .eq("id", itemToDelete.id.toString());
+
+      if (error) throw error;
+      toast.success("Item deleted successfully");
+      refetch();
+    } catch (err) {
+      console.error("Error deleting inventory item:", err);
+      toast.error("Failed to delete item");
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDepartmentFilter(null);
+    setStatusFilter(null);
+  };
+
+  const handleImportCSV = async (items: Omit<InventoryItem, "id" | "lastUpdated">[]) => {
+    const today = new Date().toISOString();
+    const dbItems = items.map(item => ({
+      ...item,
+      last_updated: today,
+      quantity: item.quantity,
+      user_id: "00000000-0000-0000-0000-000000000000",
+    }));
+
+    const { error } = await supabase.from("inventory_items").insert(dbItems);
+    if (error) {
+      toast.error("Failed to import CSV.");
+    } else {
+      toast.success(`${dbItems.length} items imported successfully.`);
+      refetch();
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!filteredData.length) return;
+    const headers = ["sku", "name", "department", "quantity", "status", "lastUpdated"];
+    const csvRows = [
+      headers.join(","),
+      ...filteredData.map(item => 
+        headers.map(header => (item as any)[header]).join(",")
+      )
+    ];
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "inventory_export.csv");
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`${filteredData.length} items exported to CSV.`);
+  };
 
   return (
-    <div>
-      <div className="mb-4 flex items-center gap-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <input
-            className="pl-9 pr-3 py-2 rounded border border-gray-200 w-full md:w-72 bg-white focus:outline-primary"
-            placeholder="Search inventory"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <Button variant="default" size="sm" className="gap-1">
-          <Plus className="h-4 w-4" />
-          Add Item
-        </Button>
-      </div>
-      <div className="rounded border bg-white shadow-sm overflow-x-auto animate-fade-in">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Cost</TableHead>
-              <TableHead>Retail</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredItems.length ? (
-              filteredItems.map(item => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.sku || "N/A"}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{item.department || "N/A"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{item.status}</Badge>
-                  </TableCell>
-                  <TableCell>${item.cost_price?.toFixed(2) || "N/A"}</TableCell>
-                  <TableCell>${item.retail_price?.toFixed(2) || "N/A"}</TableCell>
-                  <TableCell className="flex gap-1">
-                    <Button size="sm" variant="outline" className="gap-1">
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="ghost" className="gap-1">
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No inventory items found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+    <div className="space-y-6">
+      <InventoryListFilter 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={setDepartmentFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        currentDepartments={departments}
+        currentStatuses={statuses}
+        clearFilters={clearFilters}
+        onImportClick={() => setImportDialogOpen(true)}
+        onExportClick={handleExportCSV}
+        onAddClick={() => setAddDialogOpen(true)}
+      />
+      <InventoryTable 
+        data={filteredData}
+        isLoading={isLoading}
+        error={error}
+        onEdit={(item) => setEditingItem(item)}
+        onDelete={(item) => {
+          setItemToDelete(item);
+          setDeleteDialogOpen(true);
+        }}
+      />
+      <InventoryDialogs 
+        addDialogOpen={addDialogOpen}
+        setAddDialogOpen={setAddDialogOpen}
+        editingItem={editingItem}
+        setEditingItem={setEditingItem}
+        onSave={handleSaveItem}
+        importDialogOpen={importDialogOpen}
+        setImportDialogOpen={setImportDialogOpen}
+        onImport={handleImportCSV}
+        deleteDialogOpen={deleteDialogOpen}
+        setDeleteDialogOpen={setDeleteDialogOpen}
+        onDeleteConfirm={handleDeleteConfirm}
+        itemToDelete={itemToDelete}
+      />
     </div>
   );
-}
+};
+
+export default InventoryList;
