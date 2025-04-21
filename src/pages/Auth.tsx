@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { generateUserId } from "@/utils/userUtils";
 
 type AuthView = "login" | "signup";
-type AuthError = string | null;
 
 export default function Auth() {
   const [view, setView] = useState<AuthView>("login");
@@ -18,7 +17,7 @@ export default function Auth() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<AuthError>(null);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Redirect to "/" if already authenticated

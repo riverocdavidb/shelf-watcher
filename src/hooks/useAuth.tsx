@@ -5,11 +5,13 @@ import type { Session, User } from "@supabase/supabase-js";
 
 export type UserProfile = {
   id: string;
-  user_id: string;
-  username: string;
+  user_id?: string;
+  username?: string;
   first_name: string | null;
   last_name: string | null;
-  email: string;
+  email?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export function useAuth() {
@@ -62,7 +64,19 @@ export function useAuth() {
       if (error) {
         console.error('Error fetching user profile:', error);
       } else if (data) {
-        setProfile(data as UserProfile);
+        // Convert the profile data to the expected UserProfile type
+        setProfile({
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          // Add email from the auth user since it's not in the profile table
+          email: user?.email || undefined,
+          // These fields might be undefined until we migrate the database
+          user_id: data.user_id,
+          username: data.username,
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        });
       }
     } catch (error) {
       console.error('Exception fetching user profile:', error);
