@@ -41,6 +41,64 @@ export default function Auth() {
     navigate("/");
   }
 
+  async function handleDemoLogin() {
+    setLoading(true);
+    setError(null);
+    
+    // Demo credentials
+    const demoEmail = "demo@example.com";
+    const demoPassword = "demo123456";
+    
+    // Try to login with demo credentials
+    const { error: loginError } = await supabase.auth.signInWithPassword({ 
+      email: demoEmail, 
+      password: demoPassword 
+    });
+    
+    // If login fails (first time), create the demo account
+    if (loginError) {
+      console.log("Creating demo account...");
+      
+      // Generate a unique user_id
+      const user_id = generateUserId();
+      
+      const { error: signupError } = await supabase.auth.signUp({
+        email: demoEmail,
+        password: demoPassword,
+        options: {
+          data: {
+            first_name: "Demo",
+            last_name: "User",
+            username: "demolover",
+            user_id,
+          },
+        },
+      });
+      
+      if (signupError) {
+        console.error("Demo signup error:", signupError);
+        setError("Failed to create demo account: " + signupError.message);
+        setLoading(false);
+        return;
+      }
+      
+      // Try login again after account creation
+      const { error: retryError } = await supabase.auth.signInWithPassword({ 
+        email: demoEmail, 
+        password: demoPassword 
+      });
+      
+      if (retryError) {
+        setError("Demo login failed after account creation: " + retryError.message);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Successful login
+    navigate("/");
+  }
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -163,6 +221,19 @@ export default function Auth() {
             {view === "login" ? "Sign In" : "Sign Up"}
           </Button>
         </form>
+        
+        {/* Demo user button */}
+        <div className="mt-4">
+          <Button 
+            variant="secondary" 
+            className="w-full" 
+            onClick={handleDemoLogin} 
+            disabled={loading}
+          >
+            Sign in as Demo User
+          </Button>
+        </div>
+        
         <div className="mt-4 flex flex-col items-center gap-1">
           {view === "login" ? (
             <span>
