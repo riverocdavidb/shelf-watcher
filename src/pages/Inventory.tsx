@@ -9,8 +9,7 @@ const Inventory = () => {
     // Simple way to verify the page is loading correctly
     console.log("Inventory page loaded");
     
-    toast({
-      title: "Inventory Module",
+    toast("Inventory Module", {
       description: "Connected to database. Add, edit, or delete items to manage your inventory.",
     });
   }, []);

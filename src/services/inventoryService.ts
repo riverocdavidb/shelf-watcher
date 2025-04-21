@@ -123,25 +123,37 @@ const mockInventoryItems: InventoryItem[] = [
 
 export const fetchStockMovements = async (): Promise<StockMovement[]> => {
   // Try fetching from Supabase
-  const { data: supabaseData, error } = await supabase
-    .from('stock_movements')
-    .select('*, inventory_items(name)');
+  try {
+    const { data: supabaseData, error } = await supabase
+      .from('stock_movements')
+      .select('*, inventory_items(name)');
 
-  if (error) {
-    console.error('Error fetching stock movements:', error);
-    return mockStockMovements;
-  }
+    if (error) {
+      console.error('Error fetching stock movements:', error);
+      return mockStockMovements;
+    }
 
-  if (supabaseData && supabaseData.length > 0) {
-    return supabaseData.map(movement => ({
-      id: movement.id,
-      itemId: movement.item_id,
-      itemName: movement.inventory_items?.name || 'Unknown Item',
-      type: movement.type as 'received' | 'sold' | 'damaged' | 'stolen' | 'adjustment',
-      quantity: movement.quantity,
-      date: movement.created_at,
-      employeeName: movement.employee_name || 'System',
-    }));
+    if (supabaseData && supabaseData.length > 0) {
+      return supabaseData.map(movement => {
+        // Safe access to nested properties
+        const itemName = movement.inventory_items && 
+          typeof movement.inventory_items === 'object' && 
+          'name' in movement.inventory_items ? 
+          movement.inventory_items.name as string : 'Unknown Item';
+          
+        return {
+          id: movement.id,
+          itemId: movement.item_id,
+          itemName: itemName,
+          type: movement.type as 'received' | 'sold' | 'damaged' | 'stolen' | 'adjustment',
+          quantity: movement.quantity,
+          date: movement.created_at,
+          employeeName: movement.employee_name || 'System',
+        };
+      });
+    }
+  } catch (err) {
+    console.error('Failed to process stock movements:', err);
   }
 
   return mockStockMovements;
