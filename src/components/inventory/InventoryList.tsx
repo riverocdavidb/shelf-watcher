@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -27,74 +27,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import AddEditItemDialog, { InventoryItem } from "./AddEditItemDialog";
 import ImportCSVDialog from "./ImportCSVDialog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useInventoryItems } from "@/services/inventoryService";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data
-const initialInventoryData = [
-  {
-    id: 1,
-    sku: "PRD001",
-    name: "Organic Bananas",
-    department: "Produce",
-    quantity: 150,
-    status: "In Stock",
-    lastUpdated: "2024-04-19",
-  },
-  {
-    id: 2,
-    sku: "DRY001",
-    name: "Whole Grain Pasta",
-    department: "Dry Goods",
-    quantity: 85,
-    status: "Low Stock",
-    lastUpdated: "2024-04-19",
-  },
-  {
-    id: 3,
-    sku: "DAI001",
-    name: "Fresh Milk 1L",
-    department: "Dairy",
-    quantity: 200,
-    status: "In Stock",
-    lastUpdated: "2024-04-19",
-  },
-  {
-    id: 4,
-    sku: "BAK001",
-    name: "Fresh Sourdough Bread",
-    department: "Bakery",
-    quantity: 45,
-    status: "Low Stock",
-    lastUpdated: "2024-04-20",
-  },
-  {
-    id: 5,
-    sku: "MEA001",
-    name: "Grass-Fed Ground Beef",
-    department: "Meat & Seafood",
-    quantity: 60,
-    status: "In Stock",
-    lastUpdated: "2024-04-20",
-  },
-  {
-    id: 6,
-    sku: "FRZ001",
-    name: "Frozen Mixed Berries",
-    department: "Frozen Foods",
-    quantity: 120,
-    status: "In Stock",
-    lastUpdated: "2024-04-18",
-  },
-  {
-    id: 7,
-    sku: "BEV001",
-    name: "Sparkling Water 12-pack",
-    department: "Beverages",
-    quantity: 10,
-    status: "Low Stock",
-    lastUpdated: "2024-04-19",
-  },
-];
-
+// Utility for UI coloring
 const getStatusColor = (status: string) => {
   switch (status) {
     case "In Stock":
@@ -108,92 +44,125 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const departments = [
+  "Produce",
+  "Dairy",
+  "Meat & Seafood",
+  "Bakery",
+  "Frozen Foods",
+  "Dry Goods",
+  "Beverages",
+];
+
+const statuses = ["In Stock", "Low Stock", "Out of Stock"];
+
 const InventoryList = () => {
-  const [inventoryData, setInventoryData] = useState<InventoryItem[]>(initialInventoryData);
-  const [filteredData, setFilteredData] = useState<InventoryItem[]>(initialInventoryData);
+  // Fetch data from Supabase
+  const { data, isLoading, error, refetch } = useInventoryItems();
+
+  // List filters and dialogs
+  const [filteredData, setFilteredData] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  
-  // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
 
+  // Convert "db inventory" to InventoryItem for UI. DB ids are uuid.
+  function normalizeDbItem(db: any): InventoryItem {
+    return {
+      id: db.id,
+      sku: db.sku || "",
+      name: db.name,
+      department: db.department || "",
+      quantity: db.quantity,
+      status: db.status,
+      lastUpdated: db.last_updated?.split("T")[0] || "",
+    };
+  }
+
   // Apply filters and search
   useEffect(() => {
-    let result = [...inventoryData];
-    
-    // Apply search
+    if (!data) {
+      setFilteredData([]);
+      return;
+    }
+    let items = data.map(normalizeDbItem);
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(item => 
-        item.name.toLowerCase().includes(query) || 
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
         item.sku.toLowerCase().includes(query) ||
         item.department.toLowerCase().includes(query)
       );
     }
-    
-    // Apply department filter
     if (departmentFilter) {
-      result = result.filter(item => item.department === departmentFilter);
+      items = items.filter(item => item.department === departmentFilter);
     }
-    
-    // Apply status filter
     if (statusFilter) {
-      result = result.filter(item => item.status === statusFilter);
+      items = items.filter(item => item.status === statusFilter);
     }
-    
-    setFilteredData(result);
-  }, [inventoryData, searchQuery, departmentFilter, statusFilter]);
+    setFilteredData(items);
+  }, [data, searchQuery, departmentFilter, statusFilter]);
 
-  // Handle adding a new item
-  const handleAddItem = (newItemData: Omit<InventoryItem, "id" | "lastUpdated">) => {
-    const today = new Date().toISOString().split('T')[0];
-    const newItem: InventoryItem = {
-      id: Math.max(0, ...inventoryData.map(item => item.id)) + 1,
+  // Add new item to Supabase
+  const handleAddItem = async (newItemData: Omit<InventoryItem, "id" | "lastUpdated">) => {
+    const today = new Date().toISOString();
+    const { error } = await supabase.from("inventory_items").insert([{
       ...newItemData,
-      lastUpdated: today,
-    };
-    
-    setInventoryData([...inventoryData, newItem]);
+      last_updated: today,
+      // For now, assign a fixed user_id since this demo doesn't link users
+      user_id: "00000000-0000-0000-0000-000000000000",
+    }]);
+    if (error) {
+      toast({ title: "Error", description: "Failed to add item." });
+    } else {
+      toast({ title: "Item Added", description: `${newItemData.name} added to inventory.` });
+      refetch();
+    }
   };
 
-  // Handle editing an item
-  const handleEditItem = (editedItemData: Omit<InventoryItem, "id" | "lastUpdated">) => {
+  // Edit item in Supabase
+  const handleEditItem = async (editedItemData: Omit<InventoryItem, "id" | "lastUpdated">) => {
     if (!editingItem) return;
-    
-    const today = new Date().toISOString().split('T')[0];
-    const updatedItems = inventoryData.map(item => 
-      item.id === editingItem.id 
-        ? { ...item, ...editedItemData, lastUpdated: today } 
-        : item
-    );
-    
-    setInventoryData(updatedItems);
+    const today = new Date().toISOString();
+    const { error } = await supabase.from("inventory_items")
+      .update({
+        ...editedItemData,
+        last_updated: today,
+        user_id: "00000000-0000-0000-0000-000000000000",
+      })
+      .eq("id", editingItem.id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to update item." });
+    } else {
+      toast({ title: "Item Updated", description: `${editedItemData.name} updated.` });
+      refetch();
+    }
     setEditingItem(undefined);
+  };
+
+  // Delete item from Supabase
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    const { error } = await supabase.from("inventory_items").delete().eq("id", itemToDelete.id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete item." });
+    } else {
+      toast({ title: "Item Deleted", description: `${itemToDelete.name} has been removed.` });
+      refetch();
+    }
+    setItemToDelete(null);
+    setDeleteDialogOpen(false);
   };
 
   // Start edit process
   const startEdit = (item: InventoryItem) => {
     setEditingItem(item);
-  };
-
-  // Handle deleting an item
-  const handleDeleteItem = () => {
-    if (!itemToDelete) return;
-    
-    const updatedItems = inventoryData.filter(item => item.id !== itemToDelete.id);
-    setInventoryData(updatedItems);
-    setItemToDelete(null);
-    setDeleteDialogOpen(false);
-    
-    toast({
-      title: "Item Deleted",
-      description: `${itemToDelete.name} has been removed from inventory.`,
-    });
   };
 
   // Confirm delete dialog
@@ -203,53 +172,56 @@ const InventoryList = () => {
   };
 
   // Handle CSV import
-  const handleImportCSV = (items: Omit<InventoryItem, "id" | "lastUpdated">[]) => {
-    const today = new Date().toISOString().split('T')[0];
-    const highestId = Math.max(0, ...inventoryData.map(item => item.id));
-    
-    const newItems = items.map((item, index) => ({
+  const handleImportCSV = async (items: Omit<InventoryItem, "id" | "lastUpdated">[]) => {
+    const today = new Date().toISOString();
+    const dbItems = items.map(item => ({
       ...item,
-      id: highestId + index + 1,
-      lastUpdated: today,
+      last_updated: today,
+      user_id: "00000000-0000-0000-0000-000000000000",
     }));
-    
-    setInventoryData([...inventoryData, ...newItems]);
+    const { error } = await supabase.from("inventory_items").insert(dbItems);
+    if (error) {
+      toast({ title: "Import Failed", description: "Failed to import CSV." });
+    } else {
+      toast({ title: "Import Successful", description: `${dbItems.length} items imported.` });
+      refetch();
+    }
   };
 
   // Handle CSV export
   const handleExportCSV = () => {
+    if (!filteredData.length) return;
     const headers = ["sku", "name", "department", "quantity", "status", "lastUpdated"];
     const csvRows = [
       headers.join(","),
       ...filteredData.map(item => 
-        headers.map(header => item[header as keyof InventoryItem]).join(",")
+        headers.map(header => (item as any)[header]).join(",")
       )
     ];
-    
     const csvString = csvRows.join("\n");
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", "inventory_export.csv");
     link.style.visibility = "hidden";
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast({
       title: "CSV Export Successful",
       description: `${filteredData.length} items exported to CSV.`,
     });
   };
 
-  // Get unique departments for filter
-  const departments = Array.from(new Set(inventoryData.map(item => item.department)));
-  
-  // Get unique statuses for filter
-  const statuses = Array.from(new Set(inventoryData.map(item => item.status)));
+  // Get unique departments for filter (based on loaded data)
+  const currentDepartments = Array.from(new Set((data || []).map((d) => d.department || ""))).filter(Boolean);
+
+  // Get unique statuses for filter (based on loaded data)
+  const currentStatuses = Array.from(new Set((data || []).map((d) => d.status))).filter(Boolean);
 
   // Clear all filters
   const clearFilters = () => {
@@ -297,7 +269,7 @@ const InventoryList = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Departments</SelectItem>
-                      {departments.map((dept) => (
+                      {currentDepartments.map((dept) => (
                         <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                       ))}
                     </SelectContent>
@@ -314,7 +286,7 @@ const InventoryList = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      {statuses.map((status) => (
+                      {currentStatuses.map((status) => (
                         <SelectItem key={status} value={status}>{status}</SelectItem>
                       ))}
                     </SelectContent>
@@ -352,61 +324,69 @@ const InventoryList = () => {
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">SKU</TableHead>
-              <TableHead>Item</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-8">Loading inventory...</div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            Error loading inventory. Please try again.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No inventory items found.
-                </TableCell>
+                <TableHead className="w-[80px]">SKU</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Updated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.department}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(item.status)}>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {item.lastUpdated}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => startEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => confirmDelete(item)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    No inventory items found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.department}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(item.status)}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {item.lastUpdated}
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => startEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => confirmDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Add/Edit Item Dialog */}
