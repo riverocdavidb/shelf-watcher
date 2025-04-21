@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -64,18 +63,13 @@ export function useAuth() {
       if (error) {
         console.error('Error fetching user profile:', error);
       } else if (data) {
-        // Convert the profile data to the expected UserProfile type
         setProfile({
           id: data.id,
           first_name: data.first_name,
           last_name: data.last_name,
-          // Add email from the auth user since it's not in the profile table
           email: user?.email || undefined,
-          // These fields might be undefined until we migrate the database
-          user_id: data.user_id,
-          username: data.username,
           created_at: data.created_at,
-          updated_at: data.updated_at
+          updated_at: data.updated_at,
         });
       }
     } catch (error) {

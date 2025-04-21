@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,7 +52,7 @@ export default function Auth() {
     }
 
     // Check if username already exists
-    const { data: existingUsers, error: checkError } = await supabase
+    const { data: existingUser, error: checkError } = await supabase
       .from('profiles')
       .select('id')
       .eq('username', username)
@@ -65,7 +64,7 @@ export default function Auth() {
       return;
     }
 
-    if (existingUsers) {
+    if (existingUser) {
       setError("Username already taken");
       setLoading(false);
       return;
@@ -75,7 +74,7 @@ export default function Auth() {
     const user_id = generateUserId();
 
     // Sign up the user
-    const { error, data } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
