@@ -339,7 +339,8 @@ export const fetchStockMovements = async (): Promise<StockMovement[]> => {
   try {
     const { data: supabaseData, error } = await supabase
       .from('stock_movements')
-      .select('*, inventory_items(name)');
+      .select('*, inventory_items(name)')
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching stock movements:', error);

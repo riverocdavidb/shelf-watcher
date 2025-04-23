@@ -16,6 +16,7 @@ import { StockMovementForm } from "./StockMovementForm";
 import ImportStockMovementsDialog from "./ImportStockMovementsDialog";
 import { ExportStockMovementsBtn } from "./ExportStockMovementsBtn";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const getMovementColor = (type: string) => {
   switch (type.toLowerCase()) {
@@ -43,25 +44,181 @@ const formatDate = (dateString: string) => {
 };
 
 const StockMovement = () => {
-  const { data: movements = [], isLoading, error } = useStockMovements();
-
+  const { data: movements = [], isLoading, error, refetch } = useStockMovements();
   const [showImport, setShowImport] = useState(false);
 
-  // TODO: Save movement to DB (Edge function/Supabase)
-  const handleAddMovement = (data: any) => {
-    toast({
-      title: "Movement registered",
-      description: `Type: ${data.type} - SKU: ${data.sku} - Qty: ${data.quantity}`,
-    });
-    // Aquí se debe guardar el movimiento real usando Supabase
+  const handleAddMovement = async (data: any) => {
+    try {
+      // Buscar el ID del ítem basado en el SKU
+      const { data: items, error: itemError } = await supabase
+        .from('inventory_items')
+        .select('id')
+        .eq('sku', data.sku)
+        .single();
+      
+      if (itemError || !items) {
+        throw new Error(`Item with SKU ${data.sku} not found`);
+      }
+      
+      // Guardar el movimiento en la base de datos
+      const { error: insertError } = await supabase
+        .from('stock_movements')
+        .insert({
+          item_id: items.id,
+          type: data.type,
+          quantity: data.quantity,
+          employee_id: data.employee !== 'System' ? null : null, // Aquí se debería mapear a un ID de empleado real si existe
+          created_at: data.date ? data.date : new Date().toISOString(),
+          notes: data.notes || null
+        });
+      
+      if (insertError) {
+        throw new Error(`Failed to register movement: ${insertError.message}`);
+      }
+      
+      // Actualizar la cantidad en el inventario según el tipo de movimiento
+      const { data: itemData, error: getItemError } = await supabase
+        .from('inventory_items')
+        .select('item_quantity')
+        .eq('id', items.id)
+        .single();
+        
+      if (getItemError) {
+        throw new Error(`Failed to get current quantity: ${getItemError.message}`);
+      }
+      
+      let newQuantity = itemData.item_quantity;
+      
+      switch(data.type) {
+        case 'received':
+          newQuantity += data.quantity;
+          break;
+        case 'sold':
+        case 'damaged':
+        case 'stolen':
+          newQuantity -= data.quantity;
+          if (newQuantity < 0) newQuantity = 0;
+          break;
+        case 'adjustment':
+          // La cantidad de ajuste puede ser positiva o negativa
+          newQuantity = data.quantity;
+          break;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('inventory_items')
+        .update({ 
+          item_quantity: newQuantity, 
+          item_update_date: new Date().toISOString() 
+        })
+        .eq('id', items.id);
+      
+      if (updateError) {
+        throw new Error(`Failed to update inventory: ${updateError.message}`);
+      }
+      
+      toast({
+        title: "Movement registered",
+        description: `Type: ${data.type} - SKU: ${data.sku} - Qty: ${data.quantity}`,
+      });
+      
+      // Actualizar la lista de movimientos
+      refetch();
+    } catch (error) {
+      console.error("Error saving movement:", error);
+      toast({
+        title: "Error registering movement",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleImportMovements = (movements: any[]) => {
-    // Aquí se pueden guardar los movimientos usando Supabase
-    toast({
-      title: "Importación recibida",
-      description: `${movements.length} movimientos recibidos`,
-    });
+  const handleImportMovements = async (movements: any[]) => {
+    try {
+      // Convertir los movimientos importados al formato esperado por Supabase
+      const movementsToInsert = await Promise.all(movements.map(async (movement) => {
+        // Buscar el ID del ítem basado en el SKU
+        const { data: items, error: itemError } = await supabase
+          .from('inventory_items')
+          .select('id')
+          .eq('sku', movement.sku)
+          .single();
+        
+        if (itemError || !items) {
+          throw new Error(`Item with SKU ${movement.sku} not found`);
+        }
+        
+        return {
+          item_id: items.id,
+          type: movement.type,
+          quantity: parseInt(movement.quantity, 10),
+          employee_id: movement.employee !== 'System' ? null : null, // Aquí se debería mapear a un ID de empleado real si existe
+          created_at: movement.date ? movement.date : new Date().toISOString(),
+          notes: movement.notes || null
+        };
+      }));
+      
+      // Insertar los movimientos en la base de datos
+      const { error: insertError } = await supabase
+        .from('stock_movements')
+        .insert(movementsToInsert);
+      
+      if (insertError) {
+        throw new Error(`Failed to import movements: ${insertError.message}`);
+      }
+      
+      // Actualizar los ítems en el inventario según los movimientos importados
+      for (const movement of movements) {
+        const { data: items, error: itemError } = await supabase
+          .from('inventory_items')
+          .select('id, item_quantity')
+          .eq('sku', movement.sku)
+          .single();
+        
+        if (itemError || !items) continue;
+        
+        let newQuantity = items.item_quantity;
+        
+        switch(movement.type) {
+          case 'received':
+            newQuantity += parseInt(movement.quantity, 10);
+            break;
+          case 'sold':
+          case 'damaged':
+          case 'stolen':
+            newQuantity -= parseInt(movement.quantity, 10);
+            if (newQuantity < 0) newQuantity = 0;
+            break;
+          case 'adjustment':
+            newQuantity = parseInt(movement.quantity, 10);
+            break;
+        }
+        
+        await supabase
+          .from('inventory_items')
+          .update({ 
+            item_quantity: newQuantity, 
+            item_update_date: new Date().toISOString() 
+          })
+          .eq('id', items.id);
+      }
+      
+      toast({
+        title: "Importación completada",
+        description: `${movements.length} movimientos importados`,
+      });
+      
+      // Actualizar la lista de movimientos
+      refetch();
+    } catch (error) {
+      console.error("Error importing movements:", error);
+      toast({
+        title: "Error importing movements",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {

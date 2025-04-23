@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,11 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
   const skuToItemName = useMemo(() => {
     const map: Record<string, string> = {};
     inventoryItems.forEach(item => { map[item.sku] = item.name; });
+    return map;
+  }, [inventoryItems]);
+  const skuToItemId = useMemo(() => {
+    const map: Record<string, string> = {};
+    inventoryItems.forEach(item => { map[item.sku] = item.id; });
     return map;
   }, [inventoryItems]);
 
@@ -105,7 +111,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     setAutocompleteResults([]);
   };
 
-  const onSubmit = (values: MovementFormInputs) => {
+  const onSubmit = async (values: MovementFormInputs) => {
     if (!SKUlist.includes(values.sku)) {
       toast({
         title: "SKU Number not valid",
@@ -114,7 +120,8 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       });
       return;
     }
-    let dateStr;
+    
+    let dateStr: string;
     if (values.date instanceof Date) {
       dateStr = format(values.date, "yyyy-MM-dd");
     } else {
@@ -129,13 +136,27 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       }
       dateStr = format(parsed, "yyyy-MM-dd");
     }
-    onSave({
-      ...values,
-      date: dateStr,
-    });
-    form.reset();
-    setSkuInput("");
-    setSelectedSKU(null);
+    
+    try {
+      await onSave({
+        ...values,
+        date: dateStr,
+      });
+      form.reset();
+      setSkuInput("");
+      setSelectedSKU(null);
+      
+      toast({
+        title: "Movement registered",
+        description: `Type: ${values.type} - SKU: ${values.sku} - Qty: ${values.quantity}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error registering movement",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -272,11 +293,11 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
           value={
             form.watch("date") instanceof Date
               ? format(form.watch("date") as Date, "MM/dd/yyyy")
-              : (form.watch("date") || "")
+              : (form.watch("date") as string || "")
           }
           onChange={(e) => {
             const value = e.target.value;
-            form.setValue("date", value as any);
+            form.setValue("date", value);
           }}
           className="mt-2"
         />
