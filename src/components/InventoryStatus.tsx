@@ -1,34 +1,11 @@
-import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useEffect } from "react";
-import { toast } from "sonner";
 import SummaryCards from "./inventory-status/SummaryCards";
 import DepartmentStatusTable from "./inventory-status/DepartmentStatusTable";
+import InventoryStatusHeader from "./inventory-status/InventoryStatusHeader";
 
-const getBadgeColor = (status: string) => {
-  switch (status) {
-    case "Good":
-      return "bg-green-100 text-green-800 hover:bg-green-100";
-    case "Warning":
-      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
-    case "Critical":
-      return "bg-red-100 text-red-800 hover:bg-red-100";
-    default:
-      return "bg-gray-100 text-gray-800 hover:bg-gray-100";
-  }
-};
-
-// Sample data to use when database is empty
 const sampleInventoryStatus = [
   {
     id: '1',
@@ -99,16 +76,14 @@ const InventoryStatus = () => {
         throw error;
       }
 
-      // If no data, populate the table with sample data
+      // Si no hay datos, usar datos de muestra e intentar insertarlos
       if (!data || data.length === 0) {
         console.log("No inventory status data found, using sample data.");
-        
-        // Optionally, we can insert the sample data into the database
         try {
           const { error: insertError } = await supabase
             .from("inventory_status")
             .insert(sampleInventoryStatus);
-            
+
           if (insertError) {
             console.error("Error inserting sample data:", insertError);
           } else {
@@ -117,7 +92,6 @@ const InventoryStatus = () => {
         } catch (e) {
           console.error("Exception when inserting sample data:", e);
         }
-        
         return sampleInventoryStatus;
       }
 
@@ -132,7 +106,7 @@ const InventoryStatus = () => {
     }
   }, [inventoryStatusData]);
 
-  // Compute aggregated summary values:
+  // Valores agregados para resumen:
   const trackingRate = useMemo(() => {
     if (!inventoryStatusData.length) return 0;
     const totalTracked = inventoryStatusData.reduce((acc, d) => acc + d.tracked_items, 0);
@@ -155,13 +129,7 @@ const InventoryStatus = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Department Inventory Status</h3>
-        <Badge variant="outline" className="ml-2">
-          Last updated: Today, 10:45 AM
-        </Badge>
-      </div>
-
+      <InventoryStatusHeader lastUpdatedText="Today, 10:45 AM" />
       <div className="space-y-4">
         <SummaryCards
           trackingRate={trackingRate}
