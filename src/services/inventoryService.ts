@@ -62,14 +62,13 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
   // Transform Supabase data to match InventoryItem interface
   if (supabaseData && supabaseData.length > 0) {
     console.log(`Successfully fetched ${supabaseData.length} inventory items from database`);
-    
     return supabaseData
       .filter(item => item.item_status !== 'Inactive')
       .map(item => ({
         id: item.id,
         name: item.name || 'Unnamed Item',
         sku: item.sku || '',
-        category: item.department || '', // Use department as category since category doesn't exist
+        category: item.department || '', // Usamos department como category
         item_quantity: item.item_quantity || 0,
         expectedStock: item.expected_stock || item.item_quantity || 0,
         costPrice: item.cost_price || 0,
@@ -81,25 +80,144 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
   }
 
   console.log('No data found in database, generating 100 sample items');
-  // If no data in database, generate 100 sample items
-  const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages", "Electronics", "Health & Beauty"];
+
+  // Lista realista de productos agrupados por departamento (inspirado en Publix)
+  const realSamples: { name: string; department: string; }[] = [
+    // Produce (15)
+    { name: "Fresh Apples Gala", department: "Produce" },
+    { name: "Organic Bananas", department: "Produce" },
+    { name: "Romaine Lettuce", department: "Produce" },
+    { name: "Sweet Strawberries", department: "Produce" },
+    { name: "Blueberries Pint", department: "Produce" },
+    { name: "Red Seedless Grapes", department: "Produce" },
+    { name: "Baby Carrots", department: "Produce" },
+    { name: "Green Bell Pepper", department: "Produce" },
+    { name: "Vidalia Onions", department: "Produce" },
+    { name: "Sliced Watermelon", department: "Produce" },
+    { name: "Organic Spinach", department: "Produce" },
+    { name: "Golden Pineapple", department: "Produce" },
+    { name: "Fresh Broccoli", department: "Produce" },
+    { name: "Avocado Hass", department: "Produce" },
+    { name: "Cucumber", department: "Produce" },
+
+    // Dairy (12)
+    { name: "Publix Whole Milk", department: "Dairy" },
+    { name: "Organic Greek Yogurt", department: "Dairy" },
+    { name: "Large Brown Eggs", department: "Dairy" },
+    { name: "Butter Unsalted", department: "Dairy" },
+    { name: "Shredded Cheddar Cheese", department: "Dairy" },
+    { name: "Lowfat Cottage Cheese", department: "Dairy" },
+    { name: "Sour Cream", department: "Dairy" },
+    { name: "Feta Cheese Crumbles", department: "Dairy" },
+    { name: "Swiss Cheese Slices", department: "Dairy" },
+    { name: "Provolone Slices", department: "Dairy" },
+    { name: "Heavy Whipping Cream", department: "Dairy" },
+    { name: "Vanilla Pudding Cups", department: "Dairy" },
+
+    // Meat & Seafood (14)
+    { name: "Ground Chuck Beef", department: "Meat & Seafood" },
+    { name: "Fresh Chicken Breast", department: "Meat & Seafood" },
+    { name: "Center Cut Pork Chops", department: "Meat & Seafood" },
+    { name: "Salmon Fillet", department: "Meat & Seafood" },
+    { name: "Large Raw Shrimp", department: "Meat & Seafood" },
+    { name: "Sliced Turkey Breast", department: "Meat & Seafood" },
+    { name: "Sirloin Steak", department: "Meat & Seafood" },
+    { name: "Italian Sausage Links", department: "Meat & Seafood" },
+    { name: "Tilapia Fillets", department: "Meat & Seafood" },
+    { name: "Catfish Nuggets", department: "Meat & Seafood" },
+    { name: "Chicken Drumsticks", department: "Meat & Seafood" },
+    { name: "Crab Imitation", department: "Meat & Seafood" },
+    { name: "Beef Stew Meat", department: "Meat & Seafood" },
+    { name: "Atlantic Scallops", department: "Meat & Seafood" },
+
+    // Bakery (11)
+    { name: "French Baguette", department: "Bakery" },
+    { name: "7-Grain Bread", department: "Bakery" },
+    { name: "Croissants Butter", department: "Bakery" },
+    { name: "Blueberry Muffins", department: "Bakery" },
+    { name: "Sourdough Boule", department: "Bakery" },
+    { name: "Buttermilk Biscuits", department: "Bakery" },
+    { name: "Chocolate Chip Cookies", department: "Bakery" },
+    { name: "Apple Fritters", department: "Bakery" },
+    { name: "Cinnamon Rolls", department: "Bakery" },
+    { name: "Glazed Donuts 6ct", department: "Bakery" },
+    { name: "Cake Slices Vanilla", department: "Bakery" },
+
+    // Frozen Foods (12)
+    { name: "Frozen Pepperoni Pizza", department: "Frozen Foods" },
+    { name: "Organic Frozen Spinach", department: "Frozen Foods" },
+    { name: "Chicken Bites", department: "Frozen Foods" },
+    { name: "Vanilla Ice Cream", department: "Frozen Foods" },
+    { name: "Berry Blend Frozen", department: "Frozen Foods" },
+    { name: "French Fries Bag", department: "Frozen Foods" },
+    { name: "Veggie Mix Steamer", department: "Frozen Foods" },
+    { name: "Microwavable Burritos", department: "Frozen Foods" },
+    { name: "Cheese Ravioli Frozen", department: "Frozen Foods" },
+    { name: "Frozen Garlic Bread", department: "Frozen Foods" },
+    { name: "Meatballs Beef", department: "Frozen Foods" },
+    { name: "Potato Tots", department: "Frozen Foods" },
+
+    // Beverages (10)
+    { name: "Publix Purified Water", department: "Beverages" },
+    { name: "Coca-Cola 12pk", department: "Beverages" },
+    { name: "Orange Juice", department: "Beverages" },
+    { name: "Sweet Tea Gallon", department: "Beverages" },
+    { name: "Coffee Ground Medium", department: "Beverages" },
+    { name: "Root Beer 6pk", department: "Beverages" },
+    { name: "Whole Milk Half-Gallon", department: "Beverages" },
+    { name: "Energy Drink", department: "Beverages" },
+    { name: "Lemonade Jug", department: "Beverages" },
+    { name: "Sparkling Water", department: "Beverages" },
+
+    // Electronics (12)
+    { name: "Portable USB Charger", department: "Electronics" },
+    { name: "Wireless Earbuds", department: "Electronics" },
+    { name: "LED Light Bulbs", department: "Electronics" },
+    { name: "Alkaline Batteries AA", department: "Electronics" },
+    { name: "Digital Thermometer", department: "Electronics" },
+    { name: "Bluetooth Speaker", department: "Electronics" },
+    { name: "Phone Car Charger", department: "Electronics" },
+    { name: "Smart Power Strip", department: "Electronics" },
+    { name: "USB-C Cable 6ft", department: "Electronics" },
+    { name: "Portable Fan USB", department: "Electronics" },
+    { name: "Travel Alarm Clock", department: "Electronics" },
+    { name: "Memory Card 32GB", department: "Electronics" },
+
+    // Health & Beauty (14)
+    { name: "Multivitamin Gummies", department: "Health & Beauty" },
+    { name: "Antibacterial Hand Soap", department: "Health & Beauty" },
+    { name: "Moisturizing Lotion", department: "Health & Beauty" },
+    { name: "Daily Toothpaste", department: "Health & Beauty" },
+    { name: "Cotton Swabs 500ct", department: "Health & Beauty" },
+    { name: "Facial Cleansing Wipes", department: "Health & Beauty" },
+    { name: "Dandruff Shampoo", department: "Health & Beauty" },
+    { name: "Disposable Razor 5ct", department: "Health & Beauty" },
+    { name: "Sensitive Skin Deodorant", department: "Health & Beauty" },
+    { name: "Pain Relief Tablets", department: "Health & Beauty" },
+    { name: "Kids Toothbrush", department: "Health & Beauty" },
+    { name: "Hydrating Face Mask", department: "Health & Beauty" },
+    { name: "Herbal Mouthwash", department: "Health & Beauty" },
+    { name: "Lip Balm SPF", department: "Health & Beauty" },
+  ];
+
+  // Rellenar hasta 100 (si el listado tiene menos, ciclar realSamples)
+  const { v4: uuidv4 } = await import('uuid');
   const statuses: Array<'In Stock' | 'Low Stock' | 'Out of Stock'> = ["In Stock", "Low Stock", "Out of Stock"];
   const sampleItems: InventoryItem[] = [];
-  
-  for (let i = 1; i <= 100; i++) {
-    const department = departments[Math.floor(Math.random() * departments.length)];
+
+  for (let i = 0; i < 100; i++) {
+    const prod = realSamples[i % realSamples.length];
     const status = statuses[Math.floor(Math.random() * statuses.length)];
     const quantity = status === "Out of Stock" ? 0 : Math.floor(Math.random() * 200) + 1;
     const expectedStock = quantity + Math.floor(Math.random() * 50);
-    const costPrice = parseFloat((Math.random() * 50 + 0.5).toFixed(2));
-    const retailPrice = parseFloat((costPrice * (Math.random() * 0.5 + 1.2)).toFixed(2));
-    
+    const costPrice = parseFloat((Math.random() * 20 + 2).toFixed(2));
+    const retailPrice = parseFloat((costPrice * (Math.random() * 0.75 + 1.20)).toFixed(2));
     sampleItems.push({
-      id: `item-${i}`, // Changed from sample-i to item-i to make it a valid UUID format
-      name: `Sample Product ${i}`,
-      sku: `SKU-${i.toString().padStart(5, '0')}`,
-      category: department,
-      department: department,
+      id: uuidv4(),
+      name: prod.name,
+      sku: `SKU-${(i+1).toString().padStart(5, '0')}`,
+      category: prod.department,
+      department: prod.department,
       item_quantity: quantity,
       expectedStock: expectedStock,
       costPrice: costPrice,
@@ -108,8 +226,8 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
       item_status: status
     });
   }
-  
-  // Try to insert the sample items into the database
+
+  // Intentar insertar sampleItems en la DB solo si hay error de fetch
   try {
     const { error: insertError } = await supabase
       .from('inventory_items')
@@ -125,7 +243,6 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
         item_update_date: item.lastUpdated,
         item_status: item.item_status
       })));
-      
     if (insertError) {
       console.error('Error inserting sample inventory items:', insertError);
     } else {
@@ -134,7 +251,6 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
   } catch (err) {
     console.error('Failed to insert sample inventory items:', err);
   }
-  
   return sampleItems;
 };
 
