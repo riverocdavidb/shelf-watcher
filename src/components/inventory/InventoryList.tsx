@@ -1,26 +1,24 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
 import InventoryDialogs from "./InventoryDialogs";
-import { supabase } from "@/integrations/supabase/client";
 import { useInventoryItems } from "@/services/inventoryService";
+import { useInventoryFilters } from "./hooks/useInventoryFilters";
+import { useInventoryOperations } from "./hooks/useInventoryOperations";
+import { handleExportCSV } from "./utils/exportUtils";
 import type { InventoryItem } from "./AddEditItemDialog";
 
 const InventoryList = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const { data: rawInventoryItems = [], isLoading, error, refetch } = useInventoryItems();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
-  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { data: rawInventoryItems = [], isLoading, error, refetch } = useInventoryItems();
-
-  const inventoryItems: InventoryItem[] = React.useMemo(() => {
+  const inventoryItems: InventoryItem[] = useMemo(() => {
     return rawInventoryItems.map(item => ({
       id: typeof item.id === 'string' ? parseInt(item.id.replace(/\D/g, '').slice(0, 8), 16) || Math.floor(Math.random() * 100000) : item.id,
       sku: item.sku || "",
@@ -32,197 +30,32 @@ const InventoryList = () => {
     }));
   }, [rawInventoryItems]);
 
-  console.log(`Displaying ${inventoryItems.length} inventory items`);
+  const {
+    searchQuery,
+    setSearchQuery,
+    departmentFilter,
+    setDepartmentFilter,
+    statusFilter,
+    setStatusFilter,
+    departments,
+    statuses,
+    filteredData,
+    clearFilters
+  } = useInventoryFilters(inventoryItems);
 
-  const departments = [...new Set(inventoryItems.map(item => item.department))];
-  const statuses = [...new Set(inventoryItems.map(item => item.item_status))];
+  const {
+    itemToDelete,
+    setItemToDelete,
+    handleSaveItem,
+    handleDeleteConfirm,
+    handleImportCSV
+  } = useInventoryOperations(refetch);
 
-  const filteredData = inventoryItems.filter(item => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesDepartment = !departmentFilter || item.department === departmentFilter;
-    const matchesStatus = !statusFilter || item.item_status === statusFilter;
-
-    return matchesSearch && matchesDepartment && matchesStatus;
-  });
-
-  const handleSaveItem = async (data: Omit<InventoryItem, "id" | "lastUpdated">) => {
-    const isEditing = !!editingItem;
-    const today = new Date().toISOString();
-    
-    try {
-      console.log("Saving inventory item:", data, isEditing ? "editing" : "adding new");
-      
-      if (isEditing && editingItem) {
-        const { data: existingItems, error: fetchError } = await supabase
-          .from("inventory_items")
-          .select("*")
-          .eq("name", editingItem.name)
-          .eq("department", editingItem.department);
-
-        if (fetchError) {
-          console.error("Error fetching item to update:", fetchError);
-          throw fetchError;
-        }
-
-        if (existingItems && existingItems.length > 0) {
-          const itemToUpdate = existingItems[0];
-          
-          console.log("Updating existing item:", itemToUpdate.id);
-          
-          const { error } = await supabase
-            .from("inventory_items")
-            .update({
-              sku: data.sku,
-              name: data.name,
-              department: data.department,
-              item_quantity: data.item_quantity,
-              item_status: data.item_status,
-              item_update_date: today,
-            })
-            .eq("id", itemToUpdate.id);
-
-          if (error) {
-            console.error("Error updating inventory item:", error);
-            throw error;
-          }
-        } else {
-          console.log("Couldn't find item to update, creating new one instead");
-          await createNewItem(data, today);
-        }
-        
-        toast.success("Item updated successfully");
-      } else {
-        await createNewItem(data, today);
-        toast.success("Item added successfully");
-      }
-
-      refetch();
-    } catch (err) {
-      console.error("Error saving inventory item:", err);
-      toast.error("Failed to save item");
+  const onExportClick = () => {
+    const exportedCount = handleExportCSV(filteredData);
+    if (exportedCount) {
+      toast.success(`${exportedCount} items exported to CSV.`);
     }
-  };
-
-  const createNewItem = async (data: Omit<InventoryItem, "id" | "lastUpdated">, today: string) => {
-    const { error } = await supabase
-      .from("inventory_items")
-      .insert({
-        id: uuidv4(),
-        sku: data.sku,
-        name: data.name,
-        department: data.department,
-        item_quantity: data.item_quantity,
-        item_status: data.item_status,
-        item_update_date: today
-      });
-
-    if (error) {
-      console.error("Error inserting inventory item:", error);
-      throw error;
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
-
-    try {
-      const { data: itemsToDelete, error: fetchError } = await supabase
-        .from("inventory_items")
-        .select("*")
-        .eq("name", itemToDelete.name)
-        .eq("department", itemToDelete.department);
-
-      if (fetchError) {
-        console.error("Error finding item to delete:", fetchError);
-        throw fetchError;
-      }
-
-      if (itemsToDelete && itemsToDelete.length > 0) {
-        const { error } = await supabase
-          .from("inventory_items")
-          .delete()
-          .eq("id", itemsToDelete[0].id);
-
-        if (error) {
-          console.error("Error deleting item:", error);
-          throw error;
-        }
-      } else {
-        console.warn("Item to delete not found in database");
-      }
-      
-      toast.success("Item deleted successfully");
-      refetch();
-    } catch (err) {
-      console.error("Error deleting inventory item:", err);
-      toast.error("Failed to delete item");
-    } finally {
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-    }
-  };
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setDepartmentFilter(null);
-    setStatusFilter(null);
-  };
-
-  const handleImportCSV = async (items: Omit<InventoryItem, "id" | "lastUpdated">[]) => {
-    const today = new Date().toISOString();
-    
-    try {
-      const dbItems = items.map(item => ({
-        id: uuidv4(),
-        sku: item.sku,
-        name: item.name,
-        department: item.department,
-        item_quantity: item.item_quantity,
-        item_status: item.item_status,
-        item_update_date: today
-      }));
-
-      const { error } = await supabase.from("inventory_items").insert(dbItems);
-      
-      if (error) {
-        console.error("Error importing CSV items:", error);
-        toast.error("Failed to import CSV.");
-      } else {
-        toast.success(`${dbItems.length} items imported successfully.`);
-        refetch();
-      }
-    } catch (err) {
-      console.error("Error in CSV import:", err);
-      toast.error("An error occurred during import.");
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (!filteredData.length) return;
-    const headers = ["sku", "name", "department", "item_quantity", "item_status", "lastUpdated"];
-    const csvRows = [
-      headers.join(","),
-      ...filteredData.map(item => 
-        headers.map(header => (item as any)[header]).join(",")
-      )
-    ];
-    const csvString = csvRows.join("\n");
-    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "inventory_export.csv");
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success(`${filteredData.length} items exported to CSV.`);
   };
 
   return (
@@ -238,7 +71,7 @@ const InventoryList = () => {
         currentStatuses={statuses}
         clearFilters={clearFilters}
         onImportClick={() => setImportDialogOpen(true)}
-        onExportClick={handleExportCSV}
+        onExportClick={onExportClick}
         onAddClick={() => setAddDialogOpen(true)}
       />
       <InventoryTable 
@@ -264,6 +97,7 @@ const InventoryList = () => {
         setDeleteDialogOpen={setDeleteDialogOpen}
         onDeleteConfirm={handleDeleteConfirm}
         itemToDelete={itemToDelete}
+        onSuccess={() => refetch()}
       />
     </div>
   );

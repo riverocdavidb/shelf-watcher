@@ -1,191 +1,35 @@
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { inventoryItemFormSchema, departments, statuses } from "./inventoryFormUtils";
+import { useInventoryForm } from "./hooks/useInventoryForm";
+import InventoryBasicFields from "./forms/InventoryBasicFields";
+import InventoryDepartmentField from "./forms/InventoryDepartmentField";
+import InventoryQuantityField from "./forms/InventoryQuantityField";
+import InventoryStatusField from "./forms/InventoryStatusField";
 import type { InventoryItem } from "./AddEditItemDialog";
 
 type InventoryItemFormProps = {
   onSave: (data: Omit<InventoryItem, "id" | "lastUpdated">) => void;
   onClose: () => void;
   item?: InventoryItem;
-  onSuccess?: () => void; // Add onSuccess callback
+  onSuccess?: () => void;
 };
 
 const InventoryItemForm = ({ onSave, onClose, item, onSuccess }: InventoryItemFormProps) => {
-  const [loading, setLoading] = useState(false);
-  const isEditing = !!item;
-
-  const form = useForm({
-    resolver: zodResolver(inventoryItemFormSchema),
-    defaultValues: {
-      sku: item?.sku || "",
-      name: item?.name || "",
-      department: item?.department || "",
-      item_quantity: item?.item_quantity || 0,
-      item_status: item?.item_status || "",
-    },
-  });
-
-  const onSubmit = async (values: any) => {
-    setLoading(true);
-    try {
-      const formData = {
-        sku: values.sku,
-        name: values.name,
-        department: values.department,
-        item_quantity: values.item_quantity,
-        item_status: values.item_status,
-      };
-      onSave(formData);
-      form.reset();
-      onClose();
-      toast({
-        title: `Item ${isEditing ? "updated" : "added"} successfully`,
-        description: `${values.name} has been ${isEditing ? "updated" : "added"} to inventory.`,
-      });
-      
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      toast({
-        title: "Something went wrong",
-        description: "Could not save the item. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { form, loading, isEditing, onSubmit } = useInventoryForm(onSave, onClose, item, onSuccess);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="sku"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>SKU</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter SKU" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter item name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <InventoryBasicFields control={form.control} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="department"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Department</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="item_quantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quantity</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Enter quantity"
-                    {...field}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <InventoryDepartmentField control={form.control} />
+          <InventoryQuantityField control={form.control} />
         </div>
 
-        <FormField
-          control={form.control}
-          name="item_status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {statuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <InventoryStatusField control={form.control} />
 
         <div className="pt-4 flex justify-end gap-2">
           <Button variant="outline" type="button" onClick={onClose}>

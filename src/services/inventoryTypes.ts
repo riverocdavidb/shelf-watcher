@@ -1,5 +1,5 @@
 
-// Common inventory types
+// Common inventory types that will be shared across service files
 
 export interface InventoryItem {
   id: string;
@@ -46,3 +46,17 @@ export interface Department {
   department_id: number;
   name: string;
 }
+
+// Raw DB types for mapping
+export type RawStockMovement = {
+  id: string;
+  item_id: string;
+  quantity: number;
+  type: string;
+  created_at: string;
+  employee_id?: string | null;
+  notes?: string | null;
+  inventory_items?: {
+    name?: string;
+  } | null;
+};
