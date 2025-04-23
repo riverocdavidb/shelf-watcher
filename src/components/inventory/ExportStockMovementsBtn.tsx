@@ -7,13 +7,14 @@ import { toast } from "@/hooks/use-toast";
 
 type Props = {
   filterBySKU?: string;
+  children?: React.ReactNode;
 };
 
 const headers = [
   "sku","type","quantity","employee","date"
 ];
 
-export const ExportStockMovementsBtn: React.FC<Props> = ({ filterBySKU }) => {
+export const ExportStockMovementsBtn: React.FC<Props> = ({ filterBySKU, children }) => {
   const { data: movements = [] } = useStockMovements();
 
   const handleExport = () => {
@@ -50,8 +51,12 @@ export const ExportStockMovementsBtn: React.FC<Props> = ({ filterBySKU }) => {
 
   return (
     <Button type="button" onClick={handleExport} variant="outline">
-      <FileText className="mr-2 h-4 w-4" />
-      Export Movements
+      {children || (
+        <>
+          <FileText className="mr-2 h-4 w-4" />
+          Export Movements
+        </>
+      )}
     </Button>
   );
 };

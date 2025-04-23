@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -277,13 +278,13 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
                 <Calendar
                   mode="single"
                   selected={
-                    field.value
-                      ? (field.value instanceof Date
-                          ? field.value
-                          : parse(field.value, "MM/dd/yyyy", new Date()))
+                    field.value instanceof Date 
+                    ? field.value 
+                    : typeof field.value === 'string' 
+                      ? parse(field.value, "MM/dd/yyyy", new Date())
                       : undefined
                   }
-                  onSelect={date => date && field.onChange(date)}
+                  onSelect={(date) => field.onChange(date)}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />

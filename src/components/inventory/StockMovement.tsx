@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import {
   Table,
@@ -10,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStockMovements } from "@/services/inventoryService";
-import { Loader2, Filter, Search, Import, Export, Plus } from "lucide-react";
+import { Loader2, Filter, Search, Import, FileText, Plus } from "lucide-react";
 import AddEditStockMovementDialog from "./AddEditStockMovementDialog";
 import ImportStockMovementsDialog from "./ImportStockMovementsDialog";
 import { ExportStockMovementsBtn } from "./ExportStockMovementsBtn";
@@ -75,7 +76,7 @@ const StockMovement = () => {
       const matchSearch =
         search.trim().length === 0 ||
         (item.itemName && item.itemName.toLowerCase().includes(search.toLowerCase())) ||
-        (item.sku && item.sku.toLowerCase().includes(search.toLowerCase()));
+        (item.itemId && item.itemId.toLowerCase().includes(search.toLowerCase()));
       const matchType =
         !filterType || item.type.toLowerCase() === filterType.toLowerCase();
       const matchEmployee =
@@ -318,7 +319,7 @@ const StockMovement = () => {
             <Import className="w-4 h-4 mr-1" /> Import CSV
           </Button>
           <ExportStockMovementsBtn>
-            <Export className="w-4 h-4 mr-1" /> Export CSV
+            <FileText className="w-4 h-4 mr-1" /> Export CSV
           </ExportStockMovementsBtn>
           <Button
             onClick={() => setAddDialogOpen(true)}
@@ -352,7 +353,7 @@ const StockMovement = () => {
             ) : (
               filteredMovements.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.date || item.created_at)}</TableCell>
+                  <TableCell>{formatDate(item.date || '')}</TableCell>
                   <TableCell>
                     <Badge className={getMovementColor(item.type)}>
                       {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
