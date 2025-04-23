@@ -90,6 +90,30 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       high_risk_items: {
         Row: {
           created_at: string | null
@@ -130,7 +154,7 @@ export type Database = {
           last_updated: string
           name: string
           retail_price: number | null
-          sku: string | null
+          sku: string
           status: string
           user_id: string | null
         }
@@ -146,7 +170,7 @@ export type Database = {
           last_updated?: string
           name: string
           retail_price?: number | null
-          sku?: string | null
+          sku: string
           status?: string
           user_id?: string | null
         }
@@ -162,7 +186,7 @@ export type Database = {
           last_updated?: string
           name?: string
           retail_price?: number | null
-          sku?: string | null
+          sku?: string
           status?: string
           user_id?: string | null
         }
@@ -405,6 +429,7 @@ export type Database = {
           employee_id: string | null
           id: string
           item_id: string
+          movement_code: string | null
           notes: string | null
           quantity: number
           type: string
@@ -414,6 +439,7 @@ export type Database = {
           employee_id?: string | null
           id?: string
           item_id: string
+          movement_code?: string | null
           notes?: string | null
           quantity: number
           type: string
@@ -423,11 +449,27 @@ export type Database = {
           employee_id?: string | null
           id?: string
           item_id?: string
+          movement_code?: string | null
           notes?: string | null
           quantity?: number
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_stock_movement_item"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {

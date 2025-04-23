@@ -1,4 +1,5 @@
 
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -10,6 +11,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useStockMovements } from "@/services/inventoryService";
 import { Loader2 } from "lucide-react";
+import { StockMovementForm } from "./StockMovementForm";
+import ImportStockMovementsDialog from "./ImportStockMovementsDialog";
+import { ExportStockMovementsBtn } from "./ExportStockMovementsBtn";
+import { toast } from "@/hooks/use-toast";
 
 const getMovementColor = (type: string) => {
   switch (type.toLowerCase()) {
@@ -39,6 +44,25 @@ const formatDate = (dateString: string) => {
 const StockMovement = () => {
   const { data: movements = [], isLoading, error } = useStockMovements();
 
+  const [showImport, setShowImport] = useState(false);
+
+  // TODO: Save movement to DB (Edge function/Supabase)
+  const handleAddMovement = (data: any) => {
+    toast({
+      title: "Movement registered",
+      description: `Type: ${data.type} - SKU: ${data.sku} - Qty: ${data.quantity}`,
+    });
+    // Aquí se debe guardar el movimiento real usando Supabase
+  };
+
+  const handleImportMovements = (movements: any[]) => {
+    // Aquí se pueden guardar los movimientos usando Supabase
+    toast({
+      title: "Importación recibida",
+      description: `${movements.length} movimientos recibidos`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -58,13 +82,25 @@ const StockMovement = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex gap-2 justify-between items-center">
+        <h2 className="font-semibold text-lg">Register Movement</h2>
+        <div className="flex gap-2">
+          <ExportStockMovementsBtn />
+          <Button type="button" onClick={() => setShowImport(true)} variant="outline">
+            Import Movements
+          </Button>
+        </div>
+      </div>
+      <StockMovementForm onSave={handleAddMovement} />
+      <ImportStockMovementsDialog open={showImport} onOpenChange={setShowImport} onImport={handleImportMovements} />
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Item ID</TableHead>
+              <TableHead>SKU</TableHead>
               <TableHead>Item Name</TableHead>
               <TableHead className="text-right">Quantity</TableHead>
               <TableHead className="text-right">Employee</TableHead>
