@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ShrinkageOverview from "./ShrinkageOverview";
@@ -6,13 +5,11 @@ import InventoryStatus from "./InventoryStatus";
 import RecentAlerts from "./RecentAlerts";
 import TrendAnalysis from "./TrendAnalysis";
 import HighRiskItems from "./HighRiskItems";
-
 const Dashboard = () => {
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Shrink Minimization Dashboard</h1>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Monitor, analyze, and prevent inventory shrinkage
           </p>
@@ -54,8 +51,6 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
