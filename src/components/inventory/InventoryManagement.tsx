@@ -11,14 +11,15 @@ const InventoryManagement = () => {
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <h1 className="text-3xl font-bold">Inventory</h1>
           <p className="text-muted-foreground mt-1">
             Track, manage, and update inventory items
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="list" className="w-full">
+      {/* Dashboard será la predeterminada */}
+      <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="grid w-full md:w-auto grid-cols-3">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="list">Inventory List</TabsTrigger>

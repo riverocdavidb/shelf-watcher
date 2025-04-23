@@ -1,4 +1,3 @@
-
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { useInventoryItems, useDepartments } from "@/services/inventoryService";
 
 const departmentData = [
   { name: "Produce", items: 120, color: "#4ADE80" },
@@ -33,14 +33,27 @@ const statusData = [
 ];
 
 const InventoryDashboard = () => {
-  const totalItems = 647;
+  // Números obtenidos de la base de datos
+  const { data: items = [], isLoading: loadingItems } = useInventoryItems();
+  const { data: departments = [], isLoading: loadingDepts } = useDepartments();
+
+  const totalItems = items.length;
+  const totalDepartments = departments.length;
+
+  // Aseguramos que si no hay datos, los gráficos no fallen
+  // Nota: Aquí utilizarías lógica real para los dashboards/gráficos según tus necesidades de negocio
+  // Por ahora, dejaremos el resto de la lógica igual con los gráficos de departamento simulados (puedes adaptar luego)
+
   const inStockItems = 420;
   const lowStockItems = 180;
   const outOfStockItems = 47;
-  const inStockPercentage = Math.round((inStockItems / totalItems) * 100);
-  const lowStockPercentage = Math.round((lowStockItems / totalItems) * 100);
-  const outOfStockPercentage = Math.round((outOfStockItems / totalItems) * 100);
-  
+  const inStockPercentage = Math.round((inStockItems / (totalItems || 647)) * 100);
+  const lowStockPercentage = Math.round((lowStockItems / (totalItems || 647)) * 100);
+  const outOfStockPercentage = Math.round((outOfStockItems / (totalItems || 647)) * 100);
+
+  // Actualiza los datos necesarios SOLO usando la info real extraída:
+  // Los gráficos y status se mantienen como antes (con datos dummy), pero los KPI principales ahora reflejan la BD.
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -51,9 +64,11 @@ const InventoryDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalItems}</div>
+            <div className="text-2xl font-bold">
+              {loadingItems ? "..." : totalItems}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Across 7 departments
+              Across {loadingDepts ? "..." : totalDepartments} departments
             </p>
           </CardContent>
         </Card>

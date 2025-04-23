@@ -75,6 +75,21 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          department_id: number
+          name: string
+        }
+        Insert: {
+          department_id?: number
+          name: string
+        }
+        Update: {
+          department_id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       high_risk_items: {
         Row: {
           created_at: string | null
