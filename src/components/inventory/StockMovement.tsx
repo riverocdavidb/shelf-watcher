@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useStockMovements } from "@/services/inventoryService";
 import { Loader2 } from "lucide-react";
 import { StockMovementForm } from "./StockMovementForm";

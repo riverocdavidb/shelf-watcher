@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +19,6 @@ const movementTypes = [
   { value: "adjustment", label: "Adjustment" },
 ];
 
-// Validar fechas MM/DD/YYYY o Date
 const movementSchema = z.object({
   sku: z.string().min(3, "SKU required"),
   itemName: z.string().min(2),
@@ -67,7 +65,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     },
   });
 
-  // Autocomplete SKU logic
   React.useEffect(() => {
     if (!skuInput) {
       setAutocompleteResults([]);
@@ -76,7 +73,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       form.setValue("itemName", "");
       return;
     }
-    // Limit autocomplete only if input is at least 3 chars
     const lower = skuInput.toLowerCase();
     const results = SKUlist.filter(
       sku => sku.toLowerCase().includes(lower)
@@ -122,7 +118,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     if (values.date instanceof Date) {
       dateStr = format(values.date, "yyyy-MM-dd");
     } else {
-      // Try parse MM/DD/YYYY
       const parsed = parse(values.date, "MM/dd/yyyy", new Date());
       if (isNaN(parsed.getTime())) {
         toast({
@@ -149,7 +144,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       className="space-y-4 max-w-[460px] mx-auto"
       autoComplete="off"
     >
-      {/* SKU + Autocomplete */}
       <div>
         <label className="block text-sm font-medium mb-1">SKU <span className="text-destructive">*</span></label>
         <Input
@@ -178,7 +172,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         )}
       </div>
 
-      {/* Item Name Field */}
       <div>
         <label className="block text-sm font-medium mb-1">Item Name</label>
         <Input
@@ -189,7 +182,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         />
       </div>
 
-      {/* Movement type */}
       <div>
         <label className="block text-sm font-medium mb-1">Movement Type</label>
         <Controller
@@ -205,7 +197,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         />
       </div>
 
-      {/* Quantity */}
       <div>
         <label className="block text-sm font-medium mb-1">Quantity</label>
         <Controller
@@ -221,7 +212,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         />
       </div>
 
-      {/* Employee */}
       <div>
         <label className="block text-sm font-medium mb-1">Employee</label>
         <Controller
@@ -238,7 +228,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         />
       </div>
 
-      {/* Date picker */}
       <div>
         <label className="block text-sm font-medium mb-1">Date</label>
         <Controller
@@ -285,7 +274,10 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
               ? format(form.watch("date") as Date, "MM/dd/yyyy")
               : (form.watch("date") || "")
           }
-          onChange={e => form.setValue("date", e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            form.setValue("date", value as any);
+          }}
           className="mt-2"
         />
       </div>
