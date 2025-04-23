@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import {
   Table,
@@ -19,6 +18,14 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { useInventoryItems } from "@/services/inventoryService";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 const getMovementColor = (type: string) => {
   switch (type.toLowerCase()) {
@@ -55,6 +62,7 @@ const StockMovement = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string | null>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const movementTypes = useMemo(
     () =>
@@ -268,7 +276,7 @@ const StockMovement = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1 relative">
         <div className="flex-1">
           <div className="relative">
             <Input
@@ -280,37 +288,61 @@ const StockMovement = () => {
             <Search className="absolute left-2 top-2.5 text-muted-foreground h-4 w-4" />
           </div>
         </div>
-        <div className="flex flex-row flex-wrap gap-2 mt-2 md:mt-0">
-          <div>
-            <Button
-              variant="outline"
-              className={filterType ? "bg-accent" : ""}
-              onClick={() => setFilterType(null)}
-            >
-              <Filter className="mr-1 w-4 h-4" />
-              Filters
-            </Button>
-            <select
-              className="ml-2 border rounded-md h-[38px] px-3 py-1.5 text-sm"
-              value={filterType || ""}
-              onChange={e => setFilterType(e.target.value || null)}
-            >
-              <option value="">Type</option>
-              {movementTypes.map(type =>
-                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              )}
-            </select>
-            <select
-              className="ml-2 border rounded-md h-[38px] px-3 py-1.5 text-sm"
-              value={filterEmployee || ""}
-              onChange={e => setFilterEmployee(e.target.value || null)}
-            >
-              <option value="">Employee</option>
-              {employeeNames.map(emp =>
-                <option key={emp} value={emp}>{emp}</option>
-              )}
-            </select>
-          </div>
+        <div className="flex flex-row flex-wrap gap-2 mt-2 md:mt-0 items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className={`flex items-center font-medium ${filterType || filterEmployee ? "bg-accent" : ""}`}
+              >
+                <Filter className="mr-1 w-4 h-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64 z-50 bg-white border rounded-lg p-3 shadow focus:outline-none">
+              <DropdownMenuLabel className="font-semibold text-base mb-2">
+                Filter Movements
+              </DropdownMenuLabel>
+              <div className="mb-3">
+                <span className="block text-xs font-semibold mb-1">Type</span>
+                <select
+                  className="w-full border rounded-md h-9 px-3 py-1 text-sm bg-gray-50"
+                  value={filterType || ""}
+                  onChange={e => setFilterType(e.target.value || null)}
+                >
+                  <option value="">All Types</option>
+                  {movementTypes.map(type =>
+                    <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                  )}
+                </select>
+              </div>
+              <div>
+                <span className="block text-xs font-semibold mb-1">Employee</span>
+                <select
+                  className="w-full border rounded-md h-9 px-3 py-1 text-sm bg-gray-50"
+                  value={filterEmployee || ""}
+                  onChange={e => setFilterEmployee(e.target.value || null)}
+                >
+                  <option value="">All Employees</option>
+                  {employeeNames.map(emp =>
+                    <option key={emp} value={emp}>{emp}</option>
+                  )}
+                </select>
+              </div>
+              <DropdownMenuSeparator className="my-2" />
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  size="sm"
+                  onClick={() => { setFilterType(null); setFilterEmployee(null); }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             onClick={() => setShowImport(true)}
             variant="outline"

@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,7 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format, parse } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import * as z from "zod";
 import { useInventoryItems, useStockMovements } from "@/services/inventoryService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -58,6 +57,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
   const [skuInput, setSkuInput] = useState(initialSku ?? "");
   const [selectedSKU, setSelectedSKU] = useState<string | null>(initialSku ?? null);
   const [autocompleteResults, setAutocompleteResults] = useState<string[]>([]);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const form = useForm<MovementFormInputs>({
     resolver: zodResolver(movementSchema),
@@ -111,8 +111,13 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     setAutocompleteResults([]);
   };
 
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form.setValue("date", e.target.value);
+  const handleDateChange = (value: string) => {
+    let asDate = parse(value, "MM/dd/yyyy", new Date());
+    if (isValid(asDate)) {
+      form.setValue("date", asDate);
+    } else {
+      form.setValue("date", value);
+    }
   };
 
   const onSubmit = async (values: MovementFormInputs) => {
@@ -124,7 +129,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       });
       return;
     }
-    
+
     let dateStr: string;
     if (values.date instanceof Date) {
       dateStr = format(values.date, "yyyy-MM-dd");
@@ -140,7 +145,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       }
       dateStr = format(parsed, "yyyy-MM-dd");
     }
-    
+
     try {
       await onSave({
         ...values,
@@ -149,7 +154,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       form.reset();
       setSkuInput("");
       setSelectedSKU(null);
-      
+
       toast({
         title: "Movement registered",
         description: `Type: ${values.type} - SKU: ${values.sku} - Qty: ${values.quantity}`,
@@ -258,49 +263,72 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         <Controller
           name="date"
           control={form.control}
-          render={({ field }) => (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className="w-full justify-start text-left font-normal"
-                  type="button"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
-                  {field.value
-                    ? (field.value instanceof Date
-                        ? format(field.value, "MM/dd/yyyy")
-                        : field.value)
-                    : <span>Pick a date or type MM/DD/YYYY</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={
-                    field.value instanceof Date 
-                    ? field.value 
-                    : typeof field.value === 'string' 
-                      ? parse(field.value, "MM/dd/yyyy", new Date())
-                      : undefined
-                  }
-                  onSelect={(date) => field.onChange(date)}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          )}
-        />
-        <Input
-          placeholder="Or type MM/DD/YYYY"
-          value={
-            form.watch("date") instanceof Date
-              ? format(form.watch("date") as Date, "MM/dd/yyyy")
-              : (form.watch("date") as string || "")
-          }
-          onChange={handleDateInputChange}
-          className="mt-2"
+          render={({ field }) => {
+            let inputValue =
+              field.value instanceof Date
+                ? format(field.value, "MM/dd/yyyy")
+                : typeof field.value === "string"
+                  ? field.value
+                  : "";
+            return (
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <div className="relative flex">
+                  <Input
+                    type="text"
+                    className="pr-10 font-mono"
+                    placeholder="MM/DD/YYYY"
+                    value={inputValue}
+                    onChange={e => {
+                      handleDateChange(e.target.value);
+                      if (
+                        e.target.value.length === 10 &&
+                        /^\d{2}\/\d{2}\/\d{4}$/.test(e.target.value)
+                      ) {
+                        const maybeDate = parse(e.target.value, "MM/dd/yyyy", new Date());
+                        if (isValid(maybeDate)) {
+                          setCalendarOpen(false);
+                        }
+                      }
+                    }}
+                    onFocus={() => setCalendarOpen(false)}
+                  />
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      className="absolute right-1 top-[3px] p-2 h-7 w-7"
+                      tabIndex={-1}
+                    >
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                </div>
+                <PopoverContent className="w-auto p-0 mt-2" side="bottom" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      field.value instanceof Date
+                        ? field.value
+                        : typeof field.value === "string"
+                        ? (() => {
+                            const d = parse(field.value, "MM/dd/yyyy", new Date());
+                            return isValid(d) ? d : undefined;
+                          })()
+                        : undefined
+                    }
+                    onSelect={date => {
+                      setCalendarOpen(false);
+                      if (date) {
+                        field.onChange(date);
+                      }
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          }}
         />
       </div>
 
