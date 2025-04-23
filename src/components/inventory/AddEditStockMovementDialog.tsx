@@ -5,11 +5,12 @@ import { StockMovementForm } from "./StockMovementForm";
 interface Props {
   open: boolean;
   onOpenChange: (b: boolean) => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => Promise<void>;
   initialSku?: string;
+  onSuccess?: () => void; // Add onSuccess callback
 }
 
-const AddEditStockMovementDialog = ({ open, onOpenChange, onSave, initialSku }: Props) => {
+const AddEditStockMovementDialog = ({ open, onOpenChange, onSave, initialSku, onSuccess }: Props) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -22,6 +23,7 @@ const AddEditStockMovementDialog = ({ open, onOpenChange, onSave, initialSku }: 
         <StockMovementForm
           onSave={onSave}
           initialSku={initialSku}
+          onSuccess={onSuccess}
         />
       </DialogContent>
     </Dialog>

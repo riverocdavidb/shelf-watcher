@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +11,7 @@ import { movementSchema, MovementFormInputs, MovementFormProps } from "./forms/S
 import SKUField from "./forms/SKUField";
 import DatePickerField from "./forms/DatePickerField";
 
-export const StockMovementForm: React.FC<MovementFormProps> = ({ onSave, initialSku }) => {
+export const StockMovementForm: React.FC<MovementFormProps> = ({ onSave, initialSku, onSuccess }) => {
   const { data: inventoryItems = [] } = useInventoryItems();
   const { data: stockMovements = [] } = useStockMovements();
   const employees = useMemo(
@@ -126,6 +125,10 @@ export const StockMovementForm: React.FC<MovementFormProps> = ({ onSave, initial
         title: "Movement registered",
         description: `Type: ${values.type} - SKU: ${values.sku} - Qty: ${values.quantity}`,
       });
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       toast({
         title: "Error registering movement",

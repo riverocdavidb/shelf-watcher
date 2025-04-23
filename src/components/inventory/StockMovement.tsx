@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useStockMovements, useInventoryItems } from "@/services/inventoryService";
 import { Loader2 } from "lucide-react";
@@ -117,8 +116,7 @@ const StockMovement = () => {
         description: `Type: ${data.type} - SKU: ${data.sku} - Qty: ${data.quantity}`,
       });
 
-      refetch();
-      setAddDialogOpen(false);
+      return Promise.resolve();
     } catch (error) {
       console.error("Error saving movement:", error);
       toast({
@@ -126,6 +124,7 @@ const StockMovement = () => {
         description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
+      return Promise.reject(error);
     }
   };
 
@@ -257,6 +256,10 @@ const StockMovement = () => {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSave={handleAddMovement}
+        onSuccess={() => {
+          refetch();
+          setAddDialogOpen(false);
+        }}
       />
       <ImportStockMovementsDialog
         open={showImport}

@@ -13,6 +13,7 @@ export const movementSchema = z.object({
 export type MovementFormInputs = z.infer<typeof movementSchema>;
 
 export interface MovementFormProps {
-  onSave: (data: Omit<MovementFormInputs, "itemName">) => void;
+  onSave: (data: Omit<MovementFormInputs, "itemName">) => Promise<void>;
   initialSku?: string;
+  onSuccess?: () => void; // Add onSuccess callback
 }
