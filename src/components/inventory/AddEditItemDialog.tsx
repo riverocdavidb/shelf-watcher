@@ -7,8 +7,8 @@ export type InventoryItem = {
   sku: string;
   name: string;
   department: string;
-  quantity: number;
-  status: string;
+  item_quantity: number;
+  item_status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
   lastUpdated: string;
 };
 

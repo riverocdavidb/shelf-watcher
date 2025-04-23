@@ -40,8 +40,8 @@ const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) =>
       sku: item?.sku || "",
       name: item?.name || "",
       department: item?.department || "",
-      quantity: item?.quantity || 0,
-      status: item?.status || "",
+      item_quantity: item?.item_quantity || 0,
+      item_status: item?.item_status || "",
     },
   });
 
@@ -52,8 +52,8 @@ const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) =>
         sku: values.sku,
         name: values.name,
         department: values.department,
-        quantity: values.quantity,
-        status: values.status,
+        item_quantity: values.item_quantity,
+        item_status: values.item_status,
       };
       onSave(formData);
       form.reset();
@@ -135,7 +135,7 @@ const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) =>
 
           <FormField
             control={form.control}
-            name="quantity"
+            name="item_quantity"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Quantity</FormLabel>
@@ -155,7 +155,7 @@ const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) =>
 
         <FormField
           control={form.control}
-          name="status"
+          name="item_status"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>

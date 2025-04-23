@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,16 +7,7 @@ import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
 import InventoryDialogs from "./InventoryDialogs";
 import { v4 as uuidv4 } from "uuid";
-
-export type InventoryItem = {
-  id: number;
-  sku: string;
-  name: string;
-  department: string;
-  item_quantity: number;
-  item_status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
-  lastUpdated: string;
-};
+import type { InventoryItem } from "./AddEditItemDialog";
 
 const InventoryList = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +39,7 @@ const InventoryList = () => {
           name: item.name,
           department: item.department || "",
           item_quantity: item.item_quantity,
-          item_status: item.item_status || 'In Stock',
+          item_status: item.item_status as 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive',
           lastUpdated: new Date(item.item_update_date).toLocaleDateString(),
         }));
     },
@@ -58,7 +50,7 @@ const InventoryList = () => {
     if (inventoryItemsRaw.length >= 5) return inventoryItemsRaw;
     const generated: InventoryItem[] = [...inventoryItemsRaw];
     const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages"];
-    const statuses = ["In Stock", "Low Stock", "Out of Stock"];
+    const statuses: Array<'In Stock' | 'Low Stock' | 'Out of Stock'> = ["In Stock", "Low Stock", "Out of Stock"];
     let idBase = generated.length ? Math.max(...generated.map(i => i.id)) + 1 : 1;
 
     while (generated.length < 15) {

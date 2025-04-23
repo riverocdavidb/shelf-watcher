@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -12,15 +13,7 @@ import { Edit, Trash2 } from "lucide-react";
 import type { InventoryItem } from "./AddEditItemDialog";
 
 type InventoryTableProps = {
-  data: {
-    id: number;
-    sku: string;
-    name: string;
-    department: string;
-    item_quantity: number;
-    item_status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
-    lastUpdated: string;
-  }[];
+  data: InventoryItem[];
   isLoading: boolean;
   error: any;
   onEdit: (item: InventoryItem) => void;
