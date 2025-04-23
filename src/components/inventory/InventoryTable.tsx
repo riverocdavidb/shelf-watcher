@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -13,14 +12,21 @@ import { Edit, Trash2 } from "lucide-react";
 import type { InventoryItem } from "./AddEditItemDialog";
 
 type InventoryTableProps = {
-  data: InventoryItem[];
+  data: {
+    id: number;
+    sku: string;
+    name: string;
+    department: string;
+    item_quantity: number;
+    item_status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
+    lastUpdated: string;
+  }[];
   isLoading: boolean;
   error: any;
   onEdit: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
 };
 
-// Utility for UI coloring
 const getStatusColor = (status: string) => {
   switch (status) {
     case "In Stock":
@@ -29,6 +35,8 @@ const getStatusColor = (status: string) => {
       return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
     case "Out of Stock":
       return "bg-red-100 text-red-800 hover:bg-red-100";
+    case "Inactive":
+      return "bg-gray-100 text-gray-800 hover:bg-gray-100 opacity-50";
     default:
       return "bg-gray-100 text-gray-800 hover:bg-gray-100";
   }
@@ -75,10 +83,10 @@ const InventoryTable = ({
                   <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.department}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{item.item_quantity}</TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(item.status)}>
-                      {item.status}
+                    <Badge className={getStatusColor(item.item_status)}>
+                      {item.item_status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">

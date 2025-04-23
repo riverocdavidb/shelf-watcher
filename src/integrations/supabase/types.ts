@@ -123,9 +123,12 @@ export type Database = {
           department: string | null
           expected_stock: number | null
           id: string
+          item_creation_date: string | null
+          item_quantity: number
+          item_status: string
+          item_update_date: string | null
           last_updated: string
           name: string
-          quantity: number
           retail_price: number | null
           sku: string | null
           status: string
@@ -136,9 +139,12 @@ export type Database = {
           department?: string | null
           expected_stock?: number | null
           id?: string
+          item_creation_date?: string | null
+          item_quantity?: number
+          item_status?: string
+          item_update_date?: string | null
           last_updated?: string
           name: string
-          quantity?: number
           retail_price?: number | null
           sku?: string | null
           status?: string
@@ -149,9 +155,12 @@ export type Database = {
           department?: string | null
           expected_stock?: number | null
           id?: string
+          item_creation_date?: string | null
+          item_quantity?: number
+          item_status?: string
+          item_update_date?: string | null
           last_updated?: string
           name?: string
-          quantity?: number
           retail_price?: number | null
           sku?: string | null
           status?: string

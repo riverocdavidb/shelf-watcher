@@ -7,13 +7,13 @@ export interface InventoryItem {
   name: string;
   sku: string;
   category: string;
-  currentStock: number;
+  item_quantity: number;
   expectedStock: number;
   costPrice: number;
   retailPrice: number;
   lastUpdated: string;
   department?: string;
-  status?: string;
+  item_status?: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
 }
 
 export interface StockMovement {
@@ -48,34 +48,37 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
   // Try to get data from Supabase first
   const { data: supabaseData, error } = await supabase
     .from('inventory_items')
-    .select('*');
+    .select('*')
+    .neq('item_status', 'Inactive');  // Exclude inactive items
 
   if (error) {
     console.error('Error fetching from Supabase:', error);
     // Fall back to mock data if database fetch fails
-    return mockInventoryItems;
+    return mockInventoryItems.filter(item => item.item_status !== 'Inactive');
   }
 
   // Transform Supabase data to match InventoryItem interface
   if (supabaseData && supabaseData.length > 0) {
     console.log('Fetched inventory data from Supabase:', supabaseData);
-    return supabaseData.map(item => ({
-      id: item.id,
-      name: item.name,
-      sku: item.sku || '',
-      category: item.department || '',
-      currentStock: item.quantity || 0,
-      expectedStock: item.expected_stock || item.quantity || 0,
-      costPrice: item.cost_price || 0,
-      retailPrice: item.retail_price || 0,
-      lastUpdated: item.last_updated,
-      department: item.department,
-      status: item.status,
-    }));
+    return supabaseData
+      .filter(item => item.item_status !== 'Inactive')
+      .map(item => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku || '',
+        category: item.department || '',
+        item_quantity: item.item_quantity || 0,
+        expectedStock: item.expected_stock || item.item_quantity || 0,
+        costPrice: item.cost_price || 0,
+        retailPrice: item.retail_price || 0,
+        lastUpdated: item.item_update_date || item.last_updated,
+        department: item.department,
+        item_status: item.item_status as 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive',
+      }));
   }
 
   // Return mock data as fallback
-  return mockInventoryItems;
+  return mockInventoryItems.filter(item => item.item_status !== 'Inactive');
 };
 
 // Mock data service until connected to a backend
@@ -85,39 +88,39 @@ const mockInventoryItems: InventoryItem[] = [
     name: 'Organic Apples',
     sku: 'PRD-001',
     category: 'Produce',
-    currentStock: 142,
+    item_quantity: 142,
     expectedStock: 150,
     costPrice: 0.75,
     retailPrice: 1.99,
     lastUpdated: '2023-04-18T14:30:00Z',
     department: 'Produce',
-    status: 'In Stock'
+    item_status: 'In Stock'
   },
   {
     id: '2',
     name: 'Premium Coffee',
     sku: 'GRC-045',
     category: 'Beverages',
-    currentStock: 48,
+    item_quantity: 48,
     expectedStock: 50,
     costPrice: 4.50,
     retailPrice: 9.99,
     lastUpdated: '2023-04-19T09:15:00Z',
     department: 'Beverages',
-    status: 'In Stock'
+    item_status: 'In Stock'
   },
   {
     id: '3',
     name: 'Wireless Earbuds',
     sku: 'ELC-102',
     category: 'Electronics',
-    currentStock: 18,
+    item_quantity: 18,
     expectedStock: 25,
     costPrice: 35.00,
     retailPrice: 79.99,
     lastUpdated: '2023-04-17T16:45:00Z',
     department: 'Electronics',
-    status: 'Low Stock'
+    item_status: 'Low Stock'
   },
 ];
 

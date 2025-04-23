@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +12,8 @@ export type InventoryItem = {
   sku: string;
   name: string;
   department: string;
-  quantity: number;
-  status: string;
+  item_quantity: number;
+  item_status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive';
   lastUpdated: string;
 };
 
@@ -31,28 +30,26 @@ const InventoryList = () => {
   const { data: inventoryItemsRaw = [], isLoading, error, refetch } = useQuery({
     queryKey: ["inventory"],
     queryFn: async () => {
-      console.log("Fetching inventory items from database...");
-      
       const { data, error } = await supabase
         .from("inventory_items")
-        .select("*");
+        .select("*")
+        .neq('item_status', 'Inactive');
 
       if (error) {
         console.error("Error fetching inventory:", error);
         throw error;
       }
 
-      console.log("Fetched inventory items:", data);
-      
-      return (data || []).map((item) => ({
-        id: parseInt(item.id.slice(0, 8), 16) || Math.floor(Math.random() * 100000), // Convert UUID to number or use random fallback
-        sku: item.sku || "",
-        name: item.name,
-        department: item.department || "",
-        quantity: item.quantity,
-        status: item.status,
-        lastUpdated: new Date(item.last_updated).toLocaleDateString(),
-      }));
+      return (data || [])
+        .map((item) => ({
+          id: parseInt(item.id.slice(0, 8), 16) || Math.floor(Math.random() * 100000),
+          sku: item.sku || "",
+          name: item.name,
+          department: item.department || "",
+          item_quantity: item.item_quantity,
+          item_status: item.item_status || 'In Stock',
+          lastUpdated: new Date(item.item_update_date).toLocaleDateString(),
+        }));
     },
     staleTime: 1000 * 60,
   });
@@ -64,7 +61,7 @@ const InventoryList = () => {
     const statuses = ["In Stock", "Low Stock", "Out of Stock"];
     let idBase = generated.length ? Math.max(...generated.map(i => i.id)) + 1 : 1;
 
-    while (generated.length < 15) { // Reduced from 500 to 15 for better performance
+    while (generated.length < 15) {
       const dept = departments[Math.floor(Math.random() * departments.length)];
       const stat = statuses[Math.floor(Math.random() * statuses.length)];
       const quantity = stat === "Out of Stock" ? 0 : Math.floor(Math.random() * 150) + 1;
@@ -73,8 +70,8 @@ const InventoryList = () => {
         sku: `SKU-${idBase.toString().padStart(5, "0")}`,
         name: `Sample Item ${idBase}`,
         department: dept,
-        quantity,
-        status: stat,
+        item_quantity: quantity,
+        item_status: stat,
         lastUpdated: new Date().toLocaleDateString(),
       });
     }
@@ -82,7 +79,7 @@ const InventoryList = () => {
   }, [inventoryItemsRaw]);
 
   const departments = [...new Set(inventoryItems.map(item => item.department))];
-  const statuses = [...new Set(inventoryItems.map(item => item.status))];
+  const statuses = [...new Set(inventoryItems.map(item => item.item_status))];
 
   const filteredData = inventoryItems.filter(item => {
     const matchesSearch =
@@ -90,7 +87,7 @@ const InventoryList = () => {
       item.sku.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesDepartment = !departmentFilter || item.department === departmentFilter;
-    const matchesStatus = !statusFilter || item.status === statusFilter;
+    const matchesStatus = !statusFilter || item.item_status === statusFilter;
 
     return matchesSearch && matchesDepartment && matchesStatus;
   });
@@ -103,7 +100,6 @@ const InventoryList = () => {
       console.log("Saving inventory item:", data, isEditing ? "editing" : "adding new");
       
       if (isEditing && editingItem) {
-        // Find the original Supabase record by name and department
         const { data: existingItems, error: fetchError } = await supabase
           .from("inventory_items")
           .select("*")
@@ -126,9 +122,9 @@ const InventoryList = () => {
               sku: data.sku,
               name: data.name,
               department: data.department,
-              quantity: data.quantity,
-              status: data.status,
-              last_updated: today,
+              item_quantity: data.item_quantity,
+              item_status: data.item_status,
+              item_update_date: today,
             })
             .eq("id", itemToUpdate.id);
 
@@ -137,7 +133,6 @@ const InventoryList = () => {
             throw error;
           }
         } else {
-          // If somehow we can't find the item, create a new one
           console.log("Couldn't find item to update, creating new one instead");
           await createNewItem(data, today);
         }
@@ -159,14 +154,13 @@ const InventoryList = () => {
     const { error } = await supabase
       .from("inventory_items")
       .insert({
-        id: uuidv4(), // Generate proper UUID
+        id: uuidv4(),
         sku: data.sku,
         name: data.name,
         department: data.department,
-        quantity: data.quantity,
-        status: data.status,
-        last_updated: today
-        // No user_id needed as we made it nullable in the database
+        item_quantity: data.item_quantity,
+        item_status: data.item_status,
+        item_update_date: today
       });
 
     if (error) {
@@ -179,7 +173,6 @@ const InventoryList = () => {
     if (!itemToDelete) return;
 
     try {
-      // Find the actual database item by name and department
       const { data: itemsToDelete, error: fetchError } = await supabase
         .from("inventory_items")
         .select("*")
@@ -227,13 +220,13 @@ const InventoryList = () => {
     
     try {
       const dbItems = items.map(item => ({
-        id: uuidv4(), // Generate proper UUID for each item
+        id: uuidv4(),
         sku: item.sku,
         name: item.name,
         department: item.department,
-        quantity: item.quantity,
-        status: item.status,
-        last_updated: today
+        item_quantity: item.item_quantity,
+        item_status: item.item_status,
+        item_update_date: today
       }));
 
       const { error } = await supabase.from("inventory_items").insert(dbItems);
@@ -253,7 +246,7 @@ const InventoryList = () => {
 
   const handleExportCSV = () => {
     if (!filteredData.length) return;
-    const headers = ["sku", "name", "department", "quantity", "status", "lastUpdated"];
+    const headers = ["sku", "name", "department", "item_quantity", "item_status", "lastUpdated"];
     const csvRows = [
       headers.join(","),
       ...filteredData.map(item => 
