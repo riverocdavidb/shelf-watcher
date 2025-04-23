@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -11,12 +10,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStockMovements } from "@/services/inventoryService";
-import { Loader2 } from "lucide-react";
-import { StockMovementForm } from "./StockMovementForm";
+import { Loader2, Filter, Search, Import, Export, Plus } from "lucide-react";
+import AddEditStockMovementDialog from "./AddEditStockMovementDialog";
 import ImportStockMovementsDialog from "./ImportStockMovementsDialog";
 import { ExportStockMovementsBtn } from "./ExportStockMovementsBtn";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { useInventoryItems } from "@/services/inventoryService";
 
 const getMovementColor = (type: string) => {
   switch (type.toLowerCase()) {
@@ -45,50 +46,83 @@ const formatDate = (dateString: string) => {
 
 const StockMovement = () => {
   const { data: movements = [], isLoading, error, refetch } = useStockMovements();
+  const { data: inventoryItems = [] } = useInventoryItems();
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
+
+  const movementTypes = useMemo(
+    () =>
+      Array.from(
+        new Set(movements.map((m) => m.type.toLowerCase()))
+      ),
+    [movements]
+  );
+  const employeeNames = useMemo(
+    () =>
+      Array.from(
+        new Set(movements.map((m) => m.employeeName).filter(Boolean))
+      ),
+    [movements]
+  );
+
+  const filteredMovements = useMemo(() => {
+    return movements.filter((item) => {
+      const matchSearch =
+        search.trim().length === 0 ||
+        (item.itemName && item.itemName.toLowerCase().includes(search.toLowerCase())) ||
+        (item.sku && item.sku.toLowerCase().includes(search.toLowerCase()));
+      const matchType =
+        !filterType || item.type.toLowerCase() === filterType.toLowerCase();
+      const matchEmployee =
+        !filterEmployee || item.employeeName === filterEmployee;
+      return matchSearch && matchType && matchEmployee;
+    });
+  }, [movements, search, filterType, filterEmployee]);
 
   const handleAddMovement = async (data: any) => {
     try {
-      // Buscar el ID del ítem basado en el SKU
       const { data: items, error: itemError } = await supabase
         .from('inventory_items')
         .select('id')
         .eq('sku', data.sku)
         .single();
-      
+
       if (itemError || !items) {
         throw new Error(`Item with SKU ${data.sku} not found`);
       }
-      
-      // Guardar el movimiento en la base de datos
+
       const { error: insertError } = await supabase
         .from('stock_movements')
         .insert({
           item_id: items.id,
           type: data.type,
           quantity: data.quantity,
-          employee_id: data.employee !== 'System' ? null : null, // Aquí se debería mapear a un ID de empleado real si existe
+          employee_id: data.employee !== 'System' ? null : null,
           created_at: data.date ? data.date : new Date().toISOString(),
           notes: data.notes || null
         });
-      
+
       if (insertError) {
         throw new Error(`Failed to register movement: ${insertError.message}`);
       }
-      
-      // Actualizar la cantidad en el inventario según el tipo de movimiento
+
       const { data: itemData, error: getItemError } = await supabase
         .from('inventory_items')
         .select('item_quantity')
         .eq('id', items.id)
         .single();
-        
+
       if (getItemError) {
         throw new Error(`Failed to get current quantity: ${getItemError.message}`);
       }
-      
+
       let newQuantity = itemData.item_quantity;
-      
+
       switch(data.type) {
         case 'received':
           newQuantity += data.quantity;
@@ -100,11 +134,10 @@ const StockMovement = () => {
           if (newQuantity < 0) newQuantity = 0;
           break;
         case 'adjustment':
-          // La cantidad de ajuste puede ser positiva o negativa
           newQuantity = data.quantity;
           break;
       }
-      
+
       const { error: updateError } = await supabase
         .from('inventory_items')
         .update({ 
@@ -112,17 +145,16 @@ const StockMovement = () => {
           item_update_date: new Date().toISOString() 
         })
         .eq('id', items.id);
-      
+
       if (updateError) {
         throw new Error(`Failed to update inventory: ${updateError.message}`);
       }
-      
+
       toast({
         title: "Movement registered",
         description: `Type: ${data.type} - SKU: ${data.sku} - Qty: ${data.quantity}`,
       });
-      
-      // Actualizar la lista de movimientos
+
       refetch();
     } catch (error) {
       console.error("Error saving movement:", error);
@@ -136,9 +168,7 @@ const StockMovement = () => {
 
   const handleImportMovements = async (movements: any[]) => {
     try {
-      // Convertir los movimientos importados al formato esperado por Supabase
       const movementsToInsert = await Promise.all(movements.map(async (movement) => {
-        // Buscar el ID del ítem basado en el SKU
         const { data: items, error: itemError } = await supabase
           .from('inventory_items')
           .select('id')
@@ -153,13 +183,12 @@ const StockMovement = () => {
           item_id: items.id,
           type: movement.type,
           quantity: parseInt(movement.quantity, 10),
-          employee_id: movement.employee !== 'System' ? null : null, // Aquí se debería mapear a un ID de empleado real si existe
+          employee_id: movement.employee !== 'System' ? null : null,
           created_at: movement.date ? movement.date : new Date().toISOString(),
           notes: movement.notes || null
         };
       }));
       
-      // Insertar los movimientos en la base de datos
       const { error: insertError } = await supabase
         .from('stock_movements')
         .insert(movementsToInsert);
@@ -168,7 +197,6 @@ const StockMovement = () => {
         throw new Error(`Failed to import movements: ${insertError.message}`);
       }
       
-      // Actualizar los ítems en el inventario según los movimientos importados
       for (const movement of movements) {
         const { data: items, error: itemError } = await supabase
           .from('inventory_items')
@@ -209,7 +237,6 @@ const StockMovement = () => {
         description: `${movements.length} movimientos importados`,
       });
       
-      // Actualizar la lista de movimientos
       refetch();
     } catch (error) {
       console.error("Error importing movements:", error);
@@ -240,19 +267,70 @@ const StockMovement = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 justify-between items-center">
-        <h2 className="font-semibold text-lg">Register Movement</h2>
-        <div className="flex gap-2">
-          <ExportStockMovementsBtn />
-          <Button type="button" onClick={() => setShowImport(true)} variant="outline">
-            Import Movements
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
+        <div className="flex-1">
+          <div className="relative">
+            <Input
+              className="pl-8 w-full md:w-[260px] bg-muted"
+              placeholder="Search movement..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Search className="absolute left-2 top-2.5 text-muted-foreground h-4 w-4" />
+          </div>
+        </div>
+        <div className="flex flex-row flex-wrap gap-2 mt-2 md:mt-0">
+          <div>
+            <Button
+              variant="outline"
+              className={filterType ? "bg-accent" : ""}
+              onClick={() => setFilterType(null)}
+            >
+              <Filter className="mr-1 w-4 h-4" />
+              Filters
+            </Button>
+            <select
+              className="ml-2 border rounded-md h-[38px] px-3 py-1.5 text-sm"
+              value={filterType || ""}
+              onChange={e => setFilterType(e.target.value || null)}
+            >
+              <option value="">Type</option>
+              {movementTypes.map(type =>
+                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+              )}
+            </select>
+            <select
+              className="ml-2 border rounded-md h-[38px] px-3 py-1.5 text-sm"
+              value={filterEmployee || ""}
+              onChange={e => setFilterEmployee(e.target.value || null)}
+            >
+              <option value="">Employee</option>
+              {employeeNames.map(emp =>
+                <option key={emp} value={emp}>{emp}</option>
+              )}
+            </select>
+          </div>
+          <Button
+            onClick={() => setShowImport(true)}
+            variant="outline"
+            className="flex items-center"
+          >
+            <Import className="w-4 h-4 mr-1" /> Import CSV
+          </Button>
+          <ExportStockMovementsBtn>
+            <Export className="w-4 h-4 mr-1" /> Export CSV
+          </ExportStockMovementsBtn>
+          <Button
+            onClick={() => setAddDialogOpen(true)}
+            className="bg-[#1EAEDB] text-white hover:bg-[#179AC0] font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add Movement
           </Button>
         </div>
       </div>
-      <StockMovementForm onSave={handleAddMovement} />
-      <ImportStockMovementsDialog open={showImport} onOpenChange={setShowImport} onImport={handleImportMovements} />
 
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -265,22 +343,22 @@ const StockMovement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {movements.length === 0 ? (
+            {filteredMovements.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-4">
                   No stock movements found.
                 </TableCell>
               </TableRow>
             ) : (
-              movements.map((item) => (
+              filteredMovements.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.date)}</TableCell>
+                  <TableCell>{formatDate(item.date || item.created_at)}</TableCell>
                   <TableCell>
                     <Badge className={getMovementColor(item.type)}>
                       {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{item.itemId.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-xs">{item.itemId?.slice?.(0, 8) ?? ""}</TableCell>
                   <TableCell>{item.itemName}</TableCell>
                   <TableCell className="text-right">{item.quantity}</TableCell>
                   <TableCell className="text-right">{item.employeeName}</TableCell>
@@ -290,6 +368,17 @@ const StockMovement = () => {
           </TableBody>
         </Table>
       </div>
+
+      <AddEditStockMovementDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSave={handleAddMovement}
+      />
+      <ImportStockMovementsDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        onImport={handleImportMovements}
+      />
     </div>
   );
 };

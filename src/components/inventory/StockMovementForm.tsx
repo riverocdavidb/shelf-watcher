@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -111,6 +110,10 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     setAutocompleteResults([]);
   };
 
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    form.setValue("date", e.target.value);
+  };
+
   const onSubmit = async (values: MovementFormInputs) => {
     if (!SKUlist.includes(values.sku)) {
       toast({
@@ -162,7 +165,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-4 max-w-[460px] mx-auto"
+      className="space-y-4"
       autoComplete="off"
     >
       <div>
@@ -295,10 +298,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
               ? format(form.watch("date") as Date, "MM/dd/yyyy")
               : (form.watch("date") as string || "")
           }
-          onChange={(e) => {
-            const value = e.target.value;
-            form.setValue("date", value);
-          }}
+          onChange={handleDateInputChange}
           className="mt-2"
         />
       </div>
