@@ -200,13 +200,36 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
     { name: "Lip Balm SPF", department: "Health & Beauty" },
   ];
 
-  // Rellenar hasta 100 (si el listado tiene menos, ciclar realSamples)
+  // Prefijos para cada departamento
+  const departmentPrefixes: { [key: string]: string } = {
+    "Produce": "PRD",
+    "Dairy": "DRY",
+    "Meat & Seafood": "MST",
+    "Bakery": "BKY",
+    "Frozen Foods": "FRZ",
+    "Beverages": "BEV",
+    "Electronics": "ELC",
+    "Health & Beauty": "HLT",
+  };
+
+  // Inicializa contadores para cada departamento
+  const departmentCounters: { [key: string]: number } = {};
+  Object.keys(departmentPrefixes).forEach(dep => {
+    departmentCounters[dep] = 0;
+  });
+
   const { v4: uuidv4 } = await import('uuid');
   const statuses: Array<'In Stock' | 'Low Stock' | 'Out of Stock'> = ["In Stock", "Low Stock", "Out of Stock"];
   const sampleItems: InventoryItem[] = [];
 
   for (let i = 0; i < 100; i++) {
     const prod = realSamples[i % realSamples.length];
+    // Usa el prefijo asignado, si no existe asigna "OTH"
+    const dep = prod.department;
+    const prefix = departmentPrefixes[dep] || "OTH";
+    departmentCounters[dep] = (departmentCounters[dep] || 0) + 1;
+    const skuNumber = (departmentCounters[dep] + 1000).toString(); // Para que empiece en 1001
+    const sku = `${prefix}-${skuNumber}`;
     const status = statuses[Math.floor(Math.random() * statuses.length)];
     const quantity = status === "Out of Stock" ? 0 : Math.floor(Math.random() * 200) + 1;
     const expectedStock = quantity + Math.floor(Math.random() * 50);
@@ -215,8 +238,8 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
     sampleItems.push({
       id: uuidv4(),
       name: prod.name,
-      sku: `SKU-${(i+1).toString().padStart(5, '0')}`,
-      category: prod.department,
+      sku: sku,
+      category: prod.department, // El nombre del departamento como category
       department: prod.department,
       item_quantity: quantity,
       expectedStock: expectedStock,
