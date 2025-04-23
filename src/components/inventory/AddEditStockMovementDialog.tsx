@@ -1,15 +1,15 @@
 
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StockMovementForm } from "./StockMovementForm";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   open: boolean;
   onOpenChange: (b: boolean) => void;
   onSave: (data: any) => void;
+  initialSku?: string;
 }
 
-const AddEditStockMovementDialog = ({ open, onOpenChange, onSave }: Props) => {
+const AddEditStockMovementDialog = ({ open, onOpenChange, onSave, initialSku }: Props) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -21,8 +21,8 @@ const AddEditStockMovementDialog = ({ open, onOpenChange, onSave }: Props) => {
         </DialogHeader>
         <StockMovementForm
           onSave={onSave}
+          initialSku={initialSku}
         />
-        {/* DialogFooter handled inside <StockMovementForm> for alignment */}
       </DialogContent>
     </Dialog>
   );

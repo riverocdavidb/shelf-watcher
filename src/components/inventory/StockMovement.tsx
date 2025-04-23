@@ -1,56 +1,15 @@
+
 import React, { useState, useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useStockMovements } from "@/services/inventoryService";
-import { Loader2, Filter, Search, Import, FileText, Plus } from "lucide-react";
+import { useStockMovements, useInventoryItems } from "@/services/inventoryService";
+import { Loader2 } from "lucide-react";
 import AddEditStockMovementDialog from "./AddEditStockMovementDialog";
 import ImportStockMovementsDialog from "./ImportStockMovementsDialog";
-import { ExportStockMovementsBtn } from "./ExportStockMovementsBtn";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { useInventoryItems } from "@/services/inventoryService";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-
-const getMovementColor = (type: string) => {
-  switch (type.toLowerCase()) {
-    case "received":
-      return "bg-green-100 text-green-800 hover:bg-green-100";
-    case "sold":
-      return "bg-blue-100 text-blue-800 hover:bg-blue-100";
-    case "damaged":
-      return "bg-red-100 text-red-800 hover:bg-red-100";
-    case "stolen":
-      return "bg-red-100 text-red-800 hover:bg-red-100";
-    case "adjustment":
-      return "bg-amber-100 text-amber-800 hover:bg-amber-100";
-    default:
-      return "bg-gray-100 text-gray-800 hover:bg-gray-100";
-  }
-};
-
-const formatDate = (dateString: string) => {
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch (err) {
-    return dateString;
-  }
-};
+import MovementSearchBar from "./MovementSearchBar";
+import MovementFilters from "./MovementFilters";
+import MovementActionButtons from "./MovementActionButtons";
+import MovementTable from "./MovementTable";
 
 const StockMovement = () => {
   const { data: movements = [], isLoading, error, refetch } = useStockMovements();
@@ -62,20 +21,14 @@ const StockMovement = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string | null>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const movementTypes = useMemo(
-    () =>
-      Array.from(
-        new Set(movements.map((m) => m.type.toLowerCase()))
-      ),
+    () => Array.from(new Set(movements.map((m) => m.type.toLowerCase()))),
     [movements]
   );
+  
   const employeeNames = useMemo(
-    () =>
-      Array.from(
-        new Set(movements.map((m) => m.employeeName).filter(Boolean))
-      ),
+    () => Array.from(new Set(movements.map((m) => m.employeeName).filter(Boolean))),
     [movements]
   );
 
@@ -165,6 +118,7 @@ const StockMovement = () => {
       });
 
       refetch();
+      setAddDialogOpen(false);
     } catch (error) {
       console.error("Error saving movement:", error);
       toast({
@@ -242,11 +196,12 @@ const StockMovement = () => {
       }
       
       toast({
-        title: "Importación completada",
-        description: `${movements.length} movimientos importados`,
+        title: "Import completed",
+        description: `${movements.length} movements imported`,
       });
       
       refetch();
+      setShowImport(false);
     } catch (error) {
       console.error("Error importing movements:", error);
       toast({
@@ -278,129 +233,25 @@ const StockMovement = () => {
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1 relative">
         <div className="flex-1">
-          <div className="relative">
-            <Input
-              className="pl-8 w-full md:w-[260px] bg-muted"
-              placeholder="Search movement..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Search className="absolute left-2 top-2.5 text-muted-foreground h-4 w-4" />
-          </div>
+          <MovementSearchBar search={search} setSearch={setSearch} />
         </div>
         <div className="flex flex-row flex-wrap gap-2 mt-2 md:mt-0 items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className={`flex items-center font-medium ${filterType || filterEmployee ? "bg-accent" : ""}`}
-              >
-                <Filter className="mr-1 w-4 h-4" />
-                Filters
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64 z-50 bg-white border rounded-lg p-3 shadow focus:outline-none">
-              <DropdownMenuLabel className="font-semibold text-base mb-2">
-                Filter Movements
-              </DropdownMenuLabel>
-              <div className="mb-3">
-                <span className="block text-xs font-semibold mb-1">Type</span>
-                <select
-                  className="w-full border rounded-md h-9 px-3 py-1 text-sm bg-gray-50"
-                  value={filterType || ""}
-                  onChange={e => setFilterType(e.target.value || null)}
-                >
-                  <option value="">All Types</option>
-                  {movementTypes.map(type =>
-                    <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-                  )}
-                </select>
-              </div>
-              <div>
-                <span className="block text-xs font-semibold mb-1">Employee</span>
-                <select
-                  className="w-full border rounded-md h-9 px-3 py-1 text-sm bg-gray-50"
-                  value={filterEmployee || ""}
-                  onChange={e => setFilterEmployee(e.target.value || null)}
-                >
-                  <option value="">All Employees</option>
-                  {employeeNames.map(emp =>
-                    <option key={emp} value={emp}>{emp}</option>
-                  )}
-                </select>
-              </div>
-              <DropdownMenuSeparator className="my-2" />
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="sm"
-                  onClick={() => { setFilterType(null); setFilterEmployee(null); }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            onClick={() => setShowImport(true)}
-            variant="outline"
-            className="flex items-center"
-          >
-            <Import className="w-4 h-4 mr-1" /> Import CSV
-          </Button>
-          <ExportStockMovementsBtn>
-            <FileText className="w-4 h-4 mr-1" /> Export CSV
-          </ExportStockMovementsBtn>
-          <Button
-            onClick={() => setAddDialogOpen(true)}
-            className="bg-[#1EAEDB] text-white hover:bg-[#179AC0] font-semibold"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Add Movement
-          </Button>
+          <MovementFilters 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            filterEmployee={filterEmployee}
+            setFilterEmployee={setFilterEmployee}
+            movementTypes={movementTypes}
+            employeeNames={employeeNames}
+          />
+          <MovementActionButtons 
+            onAddClick={() => setAddDialogOpen(true)}
+            onImportClick={() => setShowImport(true)}
+          />
         </div>
       </div>
 
-      <div className="rounded-md border bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Item Name</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Employee</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMovements.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-4">
-                  No stock movements found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredMovements.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.date || '')}</TableCell>
-                  <TableCell>
-                    <Badge className={getMovementColor(item.type)}>
-                      {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{item.itemId?.slice?.(0, 8) ?? ""}</TableCell>
-                  <TableCell>{item.itemName}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">{item.employeeName}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <MovementTable movements={filteredMovements} />
 
       <AddEditStockMovementDialog
         open={addDialogOpen}

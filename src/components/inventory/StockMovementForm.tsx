@@ -1,41 +1,18 @@
+
 import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
-import * as z from "zod";
 import { useInventoryItems, useStockMovements } from "@/services/inventoryService";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { movementTypes } from "./utils/stockMovementUtils";
+import { movementSchema, MovementFormInputs, MovementFormProps } from "./forms/StockMovementSchema";
+import SKUField from "./forms/SKUField";
+import DatePickerField from "./forms/DatePickerField";
 
-const movementTypes = [
-  { value: "received", label: "Received" },
-  { value: "sold", label: "Sold" },
-  { value: "damaged", label: "Damaged" },
-  { value: "stolen", label: "Stolen" },
-  { value: "adjustment", label: "Adjustment" },
-];
-
-const movementSchema = z.object({
-  sku: z.string().min(3, "SKU required"),
-  itemName: z.string().min(2),
-  type: z.enum(["received", "sold", "damaged", "stolen", "adjustment"]),
-  quantity: z.coerce.number().int().positive("Must be positive"),
-  employee: z.string(),
-  date: z.union([z.date(), z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use MM/DD/YYYY")])
-});
-
-type MovementFormInputs = z.infer<typeof movementSchema>;
-
-interface Props {
-  onSave: (data: Omit<MovementFormInputs, "itemName">) => void;
-  initialSku?: string;
-}
-
-export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
+export const StockMovementForm: React.FC<MovementFormProps> = ({ onSave, initialSku }) => {
   const { data: inventoryItems = [] } = useInventoryItems();
   const { data: stockMovements = [] } = useStockMovements();
   const employees = useMemo(
@@ -57,7 +34,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
   const [skuInput, setSkuInput] = useState(initialSku ?? "");
   const [selectedSKU, setSelectedSKU] = useState<string | null>(initialSku ?? null);
   const [autocompleteResults, setAutocompleteResults] = useState<string[]>([]);
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const form = useForm<MovementFormInputs>({
     resolver: zodResolver(movementSchema),
@@ -109,15 +85,6 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
     form.setValue("sku", sku);
     form.setValue("itemName", skuToItemName[sku] || "");
     setAutocompleteResults([]);
-  };
-
-  const handleDateChange = (value: string) => {
-    let asDate = parse(value, "MM/dd/yyyy", new Date());
-    if (isValid(asDate)) {
-      form.setValue("date", asDate);
-    } else {
-      form.setValue("date", value);
-    }
   };
 
   const onSubmit = async (values: MovementFormInputs) => {
@@ -174,33 +141,13 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
       className="space-y-4"
       autoComplete="off"
     >
-      <div>
-        <label className="block text-sm font-medium mb-1">SKU <span className="text-destructive">*</span></label>
-        <Input
-          value={skuInput}
-          onChange={handleSkuChange}
-          placeholder="Enter SKU"
-          autoComplete="off"
-          className="font-mono"
-        />
-        {skuInput && autocompleteResults.length > 0 && (
-          <div className="border rounded-md p-1 bg-background mt-1 z-20 absolute max-w-xs shadow">
-            {autocompleteResults.map(sku => (
-              <button
-                type="button"
-                key={sku}
-                className="w-full text-left px-2 py-1 hover:bg-muted/80 font-mono"
-                onClick={() => handleSelectSku(sku)}
-              >
-                {sku}
-              </button>
-            ))}
-          </div>
-        )}
-        {skuInput && !SKUlist.includes(skuInput) && (
-          <span className="text-xs text-destructive">SKU Number not valid, Please doublecheck</span>
-        )}
-      </div>
+      <SKUField 
+        skuInput={skuInput}
+        onSkuChange={handleSkuChange}
+        autocompleteResults={autocompleteResults}
+        onSelectSku={handleSelectSku}
+        isValid={SKUlist.includes(skuInput)}
+      />
 
       <div>
         <label className="block text-sm font-medium mb-1">Item Name</label>
@@ -258,79 +205,7 @@ export const StockMovementForm: React.FC<Props> = ({ onSave, initialSku }) => {
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Date</label>
-        <Controller
-          name="date"
-          control={form.control}
-          render={({ field }) => {
-            let inputValue =
-              field.value instanceof Date
-                ? format(field.value, "MM/dd/yyyy")
-                : typeof field.value === "string"
-                  ? field.value
-                  : "";
-            return (
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <div className="relative flex">
-                  <Input
-                    type="text"
-                    className="pr-10 font-mono"
-                    placeholder="MM/DD/YYYY"
-                    value={inputValue}
-                    onChange={e => {
-                      handleDateChange(e.target.value);
-                      if (
-                        e.target.value.length === 10 &&
-                        /^\d{2}\/\d{2}\/\d{4}$/.test(e.target.value)
-                      ) {
-                        const maybeDate = parse(e.target.value, "MM/dd/yyyy", new Date());
-                        if (isValid(maybeDate)) {
-                          setCalendarOpen(false);
-                        }
-                      }
-                    }}
-                    onFocus={() => setCalendarOpen(false)}
-                  />
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      className="absolute right-1 top-[3px] p-2 h-7 w-7"
-                      tabIndex={-1}
-                    >
-                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </PopoverTrigger>
-                </div>
-                <PopoverContent className="w-auto p-0 mt-2" side="bottom" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={
-                      field.value instanceof Date
-                        ? field.value
-                        : typeof field.value === "string"
-                        ? (() => {
-                            const d = parse(field.value, "MM/dd/yyyy", new Date());
-                            return isValid(d) ? d : undefined;
-                          })()
-                        : undefined
-                    }
-                    onSelect={date => {
-                      setCalendarOpen(false);
-                      if (date) {
-                        field.onChange(date);
-                      }
-                    }}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            );
-          }}
-        />
-      </div>
+      <DatePickerField control={form.control} />
 
       <div className="flex justify-end pt-3">
         <Button type="submit" disabled={!selectedSKU}>
