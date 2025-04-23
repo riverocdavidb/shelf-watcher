@@ -16,6 +16,7 @@ type InventoryDialogsProps = {
   setDeleteDialogOpen: (b: boolean) => void;
   onDeleteConfirm: () => void;
   itemToDelete: InventoryItem | null;
+  onSuccess?: () => void; // Add onSuccess callback
 };
 
 const InventoryDialogs = ({
@@ -31,6 +32,7 @@ const InventoryDialogs = ({
   setDeleteDialogOpen,
   onDeleteConfirm,
   itemToDelete,
+  onSuccess,
 }: InventoryDialogsProps) => (
   <>
     <AddEditItemDialog
@@ -43,6 +45,7 @@ const InventoryDialogs = ({
       }}
       onSave={onSave}
       item={editingItem}
+      onSuccess={onSuccess} // Pass onSuccess callback
     />
     <ImportCSVDialog
       open={importDialogOpen}

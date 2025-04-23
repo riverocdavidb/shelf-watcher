@@ -28,9 +28,10 @@ type InventoryItemFormProps = {
   onSave: (data: Omit<InventoryItem, "id" | "lastUpdated">) => void;
   onClose: () => void;
   item?: InventoryItem;
+  onSuccess?: () => void; // Add onSuccess callback
 };
 
-const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) => {
+const InventoryItemForm = ({ onSave, onClose, item, onSuccess }: InventoryItemFormProps) => {
   const [loading, setLoading] = useState(false);
   const isEditing = !!item;
 
@@ -62,6 +63,11 @@ const InventoryItemForm = ({ onSave, onClose, item }: InventoryItemFormProps) =>
         title: `Item ${isEditing ? "updated" : "added"} successfully`,
         description: `${values.name} has been ${isEditing ? "updated" : "added"} to inventory.`,
       });
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       toast({
         title: "Something went wrong",

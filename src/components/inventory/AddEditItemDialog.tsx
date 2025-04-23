@@ -17,6 +17,7 @@ interface AddEditItemDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: Omit<InventoryItem, "id" | "lastUpdated">) => void;
   item?: InventoryItem;
+  onSuccess?: () => void; // Add onSuccess callback
 }
 
 const AddEditItemDialog = ({
@@ -24,6 +25,7 @@ const AddEditItemDialog = ({
   onOpenChange,
   onSave,
   item,
+  onSuccess,
 }: AddEditItemDialogProps) => {
   const isEditing = !!item;
 
@@ -45,6 +47,7 @@ const AddEditItemDialog = ({
           onSave={onSave}
           onClose={() => onOpenChange(false)}
           item={item}
+          onSuccess={onSuccess}
         />
 
         {/* DialogFooter handled inside form for alignment */}
