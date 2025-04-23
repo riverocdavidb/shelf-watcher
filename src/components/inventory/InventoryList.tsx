@@ -1,12 +1,11 @@
-
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 import InventoryTable from "./InventoryTable";
 import InventoryListFilter from "./InventoryListFilter";
 import InventoryDialogs from "./InventoryDialogs";
-import { v4 as uuidv4 } from "uuid";
+import { supabase } from "@/integrations/supabase/client";
+import { useInventoryItems } from "@/services/inventoryService";
 import type { InventoryItem } from "./AddEditItemDialog";
 
 const InventoryList = () => {
@@ -19,56 +18,21 @@ const InventoryList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { data: inventoryItemsRaw = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["inventory"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inventory_items")
-        .select("*")
-        .neq('item_status', 'Inactive');
+  const { data: rawInventoryItems = [], isLoading, error, refetch } = useInventoryItems();
 
-      if (error) {
-        console.error("Error fetching inventory:", error);
-        throw error;
-      }
+  const inventoryItems: InventoryItem[] = React.useMemo(() => {
+    return rawInventoryItems.map(item => ({
+      id: typeof item.id === 'string' ? parseInt(item.id.replace(/\D/g, '').slice(0, 8), 16) || Math.floor(Math.random() * 100000) : item.id,
+      sku: item.sku || "",
+      name: item.name || "",
+      department: item.department || "",
+      item_quantity: item.item_quantity || 0,
+      item_status: item.item_status || "In Stock",
+      lastUpdated: new Date(item.lastUpdated).toLocaleDateString()
+    }));
+  }, [rawInventoryItems]);
 
-      return (data || [])
-        .map((item) => ({
-          id: parseInt(item.id.slice(0, 8), 16) || Math.floor(Math.random() * 100000),
-          sku: item.sku || "",
-          name: item.name,
-          department: item.department || "",
-          item_quantity: item.item_quantity,
-          item_status: item.item_status as 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive',
-          lastUpdated: new Date(item.item_update_date).toLocaleDateString(),
-        }));
-    },
-    staleTime: 1000 * 60,
-  });
-
-  const inventoryItems = React.useMemo(() => {
-    if (inventoryItemsRaw.length >= 5) return inventoryItemsRaw;
-    const generated: InventoryItem[] = [...inventoryItemsRaw];
-    const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages"];
-    const statuses: Array<'In Stock' | 'Low Stock' | 'Out of Stock'> = ["In Stock", "Low Stock", "Out of Stock"];
-    let idBase = generated.length ? Math.max(...generated.map(i => i.id)) + 1 : 1;
-
-    while (generated.length < 15) {
-      const dept = departments[Math.floor(Math.random() * departments.length)];
-      const stat = statuses[Math.floor(Math.random() * statuses.length)];
-      const quantity = stat === "Out of Stock" ? 0 : Math.floor(Math.random() * 150) + 1;
-      generated.push({
-        id: idBase++,
-        sku: `SKU-${idBase.toString().padStart(5, "0")}`,
-        name: `Sample Item ${idBase}`,
-        department: dept,
-        item_quantity: quantity,
-        item_status: stat,
-        lastUpdated: new Date().toLocaleDateString(),
-      });
-    }
-    return generated;
-  }, [inventoryItemsRaw]);
+  console.log(`Displaying ${inventoryItems.length} inventory items`);
 
   const departments = [...new Set(inventoryItems.map(item => item.department))];
   const statuses = [...new Set(inventoryItems.map(item => item.item_status))];

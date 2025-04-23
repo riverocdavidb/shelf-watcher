@@ -45,10 +45,12 @@ export interface ShrinkageReason {
 
 // API service functions that interact with Supabase
 export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
-  // Try to get data from Supabase first
+  console.log('Fetching inventory items from database...');
+  // Try to get data from Supabase with detailed error logging
   const { data: supabaseData, error } = await supabase
     .from('inventory_items')
     .select('*')
+    .order('name', { ascending: true })
     .neq('item_status', 'Inactive');  // Exclude inactive items
 
   if (error) {
@@ -59,26 +61,81 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
 
   // Transform Supabase data to match InventoryItem interface
   if (supabaseData && supabaseData.length > 0) {
-    console.log('Fetched inventory data from Supabase:', supabaseData);
+    console.log(`Successfully fetched ${supabaseData.length} inventory items from database`);
+    
     return supabaseData
       .filter(item => item.item_status !== 'Inactive')
       .map(item => ({
         id: item.id,
-        name: item.name,
+        name: item.name || 'Unnamed Item',
         sku: item.sku || '',
-        category: item.department || '',
+        category: item.category || item.department || '',
         item_quantity: item.item_quantity || 0,
         expectedStock: item.expected_stock || item.item_quantity || 0,
         costPrice: item.cost_price || 0,
         retailPrice: item.retail_price || 0,
-        lastUpdated: item.item_update_date || item.last_updated,
-        department: item.department,
+        lastUpdated: item.item_update_date || item.last_updated || new Date().toISOString(),
+        department: item.department || '',
         item_status: item.item_status as 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Inactive',
       }));
   }
 
-  // Return mock data as fallback
-  return mockInventoryItems.filter(item => item.item_status !== 'Inactive');
+  console.log('No data found in database, generating 100 sample items');
+  // If no data in database, generate 100 sample items
+  const departments = ["Produce", "Dairy", "Meat & Seafood", "Bakery", "Frozen Foods", "Beverages", "Electronics", "Health & Beauty"];
+  const statuses: Array<'In Stock' | 'Low Stock' | 'Out of Stock'> = ["In Stock", "Low Stock", "Out of Stock"];
+  const sampleItems: InventoryItem[] = [];
+  
+  for (let i = 1; i <= 100; i++) {
+    const department = departments[Math.floor(Math.random() * departments.length)];
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const quantity = status === "Out of Stock" ? 0 : Math.floor(Math.random() * 200) + 1;
+    const expectedStock = quantity + Math.floor(Math.random() * 50);
+    const costPrice = parseFloat((Math.random() * 50 + 0.5).toFixed(2));
+    const retailPrice = parseFloat((costPrice * (Math.random() * 0.5 + 1.2)).toFixed(2));
+    
+    sampleItems.push({
+      id: `sample-${i}`,
+      name: `Sample Product ${i}`,
+      sku: `SKU-${i.toString().padStart(5, '0')}`,
+      category: department,
+      department: department,
+      item_quantity: quantity,
+      expectedStock: expectedStock,
+      costPrice: costPrice,
+      retailPrice: retailPrice,
+      lastUpdated: new Date().toISOString(),
+      item_status: status
+    });
+  }
+  
+  // Try to insert the sample items into the database
+  try {
+    const { error: insertError } = await supabase
+      .from('inventory_items')
+      .insert(sampleItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        department: item.department,
+        item_quantity: item.item_quantity,
+        expected_stock: item.expectedStock,
+        cost_price: item.costPrice,
+        retail_price: item.retailPrice,
+        item_update_date: item.lastUpdated,
+        item_status: item.item_status
+      })));
+      
+    if (insertError) {
+      console.error('Error inserting sample inventory items:', insertError);
+    } else {
+      console.log('Successfully inserted 100 sample inventory items into database');
+    }
+  } catch (err) {
+    console.error('Failed to insert sample inventory items:', err);
+  }
+  
+  return sampleItems;
 };
 
 // Mock data service until connected to a backend
@@ -337,6 +394,7 @@ export const useInventoryItems = () => {
   return useQuery({
     queryKey: ['inventoryItems'],
     queryFn: fetchInventoryItems,
+    staleTime: 1000 * 60, // 1 minute
   });
 };
 
