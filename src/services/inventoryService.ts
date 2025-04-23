@@ -69,7 +69,7 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
         id: item.id,
         name: item.name || 'Unnamed Item',
         sku: item.sku || '',
-        category: item.category || item.department || '',
+        category: item.department || '', // Use department as category since category doesn't exist
         item_quantity: item.item_quantity || 0,
         expectedStock: item.expected_stock || item.item_quantity || 0,
         costPrice: item.cost_price || 0,
@@ -95,7 +95,7 @@ export const fetchInventoryItems = async (): Promise<InventoryItem[]> => {
     const retailPrice = parseFloat((costPrice * (Math.random() * 0.5 + 1.2)).toFixed(2));
     
     sampleItems.push({
-      id: `sample-${i}`,
+      id: `item-${i}`, // Changed from sample-i to item-i to make it a valid UUID format
       name: `Sample Product ${i}`,
       sku: `SKU-${i.toString().padStart(5, '0')}`,
       category: department,
