@@ -1,4 +1,3 @@
-
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -13,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import SummaryCards from "./inventory-status/SummaryCards";
+import DepartmentStatusTable from "./inventory-status/DepartmentStatusTable";
 
 const getBadgeColor = (status: string) => {
   switch (status) {
@@ -160,85 +161,18 @@ const InventoryStatus = () => {
           Last updated: Today, 10:45 AM
         </Badge>
       </div>
-      
+
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-sm font-medium text-muted-foreground">
-              Inventory Tracking Rate
-            </div>
-            <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">{trackingRate.toFixed(1)}%</div>
-              <div className="text-green-600 text-sm font-medium">+0.5%</div>
-            </div>
-            <Progress value={trackingRate} className="h-2 mt-2" />
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-sm font-medium text-muted-foreground">
-              Department Compliance
-            </div>
-            <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">{compliantDepartments}/{totalDepartmentsCount}</div>
-              <div className="text-yellow-600 text-sm font-medium">
-                {totalDepartmentsCount > 0 ? ((compliantDepartments*100)/totalDepartmentsCount).toFixed(1) : "0"}%
-              </div>
-            </div>
-            <Progress value={totalDepartmentsCount > 0 ? (compliantDepartments*100)/totalDepartmentsCount : 0} className="h-2 mt-2" />
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-sm font-medium text-muted-foreground">
-              Total Discrepancies
-            </div>
-            <div className="mt-2 flex items-end justify-between">
-              <div className="text-2xl font-bold">{totalDiscrepancies}</div>
-              <div className="text-red-600 text-sm font-medium">+12</div>
-            </div>
-            <Progress value={totalDiscrepancies} max={100} className="h-2 mt-2 bg-gray-100" />
-          </div>
-        </div>
-        
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Department</TableHead>
-                <TableHead className="text-right">Items</TableHead>
-                <TableHead className="text-right">Tracked</TableHead>
-                <TableHead className="text-right">Discrepancies</TableHead>
-                <TableHead className="text-right">Shrinkage %</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">Loading inventory data...</TableCell>
-                </TableRow>
-              ) : inventoryStatusData.length > 0 ? (
-                inventoryStatusData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.department}</TableCell>
-                    <TableCell className="text-right">{item.total_items}</TableCell>
-                    <TableCell className="text-right">{item.tracked_items}</TableCell>
-                    <TableCell className="text-right">{item.discrepancies}</TableCell>
-                    <TableCell className="text-right">{item.shrinkage_rate.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right">
-                      <Badge className={`${getBadgeColor(item.status)}`}>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">No inventory data available.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <SummaryCards
+          trackingRate={trackingRate}
+          compliantDepartments={compliantDepartments}
+          totalDepartmentsCount={totalDepartmentsCount}
+          totalDiscrepancies={totalDiscrepancies}
+        />
+        <DepartmentStatusTable
+          isLoading={isLoading}
+          data={inventoryStatusData}
+        />
       </div>
     </div>
   );
